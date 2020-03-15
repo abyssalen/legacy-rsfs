@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 // TODO should group these constants somehow
@@ -12,8 +12,12 @@ pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
 pub const DEFAULT_INDEX_FILE_PREFIX: &str = "main_file_cache.idx";
 pub const MAX_INDEX_COUNT: u8 = 255;
 pub const INDEX_FILE_BLOCK_SIZE: u8 = 6;
-pub const TOTAL_BLOCK_LENGTH: u64 = 520;
+pub const TOTAL_BLOCK_SIZE: u64 = 520;
 pub const ARCHIVE_INDEX_TYPE: IndexType = IndexType(0);
+pub const BLOCK_CHUNK_SIZE: u32 = 512;
+pub const BLOCK_CHUNK_LARGE_SIZE: u32 = 510;
+pub const BLOCK_HEADER_SIZE: u8 = 8;
+pub const BLOCK_HEADER_LARGE_SIZE: u8 = 10;
 
 pub struct IndexType(u8);
 
@@ -56,7 +60,11 @@ impl FileSystem {
         })
     }
 
-    pub fn get_index(&self, index_type: IndexType, entry_id: u32) -> Result<Index, Box<dyn Error>> {
+    pub fn get_index(
+        &self,
+        index_type: &IndexType,
+        entry_id: u32,
+    ) -> Result<Index, Box<dyn Error>> {
         let IndexType(index_id) = index_type;
 
         let mut index_file = match self.indices.get(&index_id) {
@@ -75,5 +83,94 @@ impl FileSystem {
         let offset: u64 = buffer.read_tri_byte()? as u64;
 
         Ok(Index { size, offset })
+    }
+
+    pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<ByteBuffer, Box<dyn Error>> {
+        // TODO should check for errors!!!
+        let IndexType(index_id) = index_type;
+        let index = self.get_index(&index_type, entry_id).unwrap();
+        let ref mut main_data_file = &self.main_data_file;
+
+        let mut buffer: ByteBuffer = ByteBuffer::new();
+        buffer.resize(index.size as usize);
+
+        let mut block_data_buffer = ByteBuffer::new();
+        block_data_buffer.resize(TOTAL_BLOCK_SIZE as usize);
+
+        let mut block = index.offset;
+        let mut remaining_bytes = index.size;
+        let mut current_sequence = 0;
+
+        let large = entry_id > 65535;
+
+        while remaining_bytes > 0 {
+            let mut block_data: [u8; TOTAL_BLOCK_SIZE as usize] = [0; TOTAL_BLOCK_SIZE as usize];
+            main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
+            main_data_file.read(&mut block_data)?;
+            block_data_buffer.write(&block_data)?;
+
+            let (next_entry_id, next_sequence, _next_block, next_index_id) = if !large {
+                (
+                    block_data_buffer.read_u16()? as u32,
+                    block_data_buffer.read_u16()?,
+                    block_data_buffer.read_tri_byte()?,
+                    block_data_buffer.read_u8()?,
+                )
+            } else {
+                (
+                    block_data_buffer.read_u32()?,
+                    block_data_buffer.read_u16()?,
+                    block_data_buffer.read_tri_byte()?,
+                    block_data_buffer.read_u8()?,
+                )
+            };
+
+            let remaining_chunk_size_left = std::cmp::min(
+                remaining_bytes,
+                if large {
+                    BLOCK_CHUNK_LARGE_SIZE
+                } else {
+                    BLOCK_CHUNK_SIZE
+                },
+            );
+
+            if remaining_bytes > 0 {
+                if next_index_id != (index_id + 1)
+                    || next_sequence != current_sequence
+                    || next_entry_id != entry_id
+                {
+                    // TODO proper error checking
+                    panic!(
+                        "next_index_id: {}, should be: {}.... next_seq: {}, should be: {}.... \
+                    next_entry: {}, should be: {}",
+                        next_index_id,
+                        index_id,
+                        next_sequence,
+                        current_sequence,
+                        next_entry_id,
+                        entry_id
+                    )
+                }
+
+                buffer.write(
+                    block_data_buffer.read_bytes(remaining_chunk_size_left as usize)?[..].as_mut(),
+                )?;
+
+                remaining_bytes -= remaining_chunk_size_left;
+                block += 1;
+                current_sequence += 1;
+
+                // clear the block's data buffer by setting all of the underlying data to 0
+                // we don't want to use ByteBuffer.clear() because it truncates the underlying Vec
+                // we would have to resize the underlying Vec again which isn't efficient
+                block_data_buffer.set_wpos(0);
+                block_data_buffer.set_rpos(0);
+                block_data_buffer.write_bytes(&[0; TOTAL_BLOCK_SIZE as usize]);
+                block_data_buffer.set_wpos(0);
+                block_data_buffer.set_rpos(0);
+            }
+        }
+        block_data_buffer.clear();
+        Ok(buffer)
     }
 }
