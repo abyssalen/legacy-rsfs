@@ -64,9 +64,9 @@ impl FileSystem {
             None => panic!("bro! can't get the index file rip"),
         };
 
-        let seek_from = SeekFrom::Start((entry_id as u64) * (6 as u64));
+        let seek_from = SeekFrom::Start((entry_id as u64) * (INDEX_FILE_BLOCK_SIZE as u64));
 
-        let mut buffer: [u8; 6 as usize] = [0; 6 as usize];
+        let mut buffer: [u8; INDEX_FILE_BLOCK_SIZE as usize] = [0; INDEX_FILE_BLOCK_SIZE as usize];
         index_file.seek(seek_from)?;
         index_file.read(&mut buffer)?;
 
