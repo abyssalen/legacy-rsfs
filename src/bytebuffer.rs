@@ -1,5 +1,6 @@
-use bytebuffer::ByteBuffer;
 use std::error::Error;
+
+use bytebuffer::ByteBuffer;
 
 pub trait ByteBufferExt {
     fn read_tri_byte(&mut self) -> Result<u32, Box<dyn Error>>;
