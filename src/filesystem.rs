@@ -109,21 +109,16 @@ impl FileSystem {
             main_data_file.read(&mut block_data)?;
             block_data_buffer.write(&block_data)?;
 
-            let (next_entry_id, next_sequence, _next_block, next_index_id) = if !large {
-                (
-                    block_data_buffer.read_u16()? as u32,
-                    block_data_buffer.read_u16()?,
-                    block_data_buffer.read_tri_byte()?,
-                    block_data_buffer.read_u8()?,
-                )
-            } else {
-                (
-                    block_data_buffer.read_u32()?,
-                    block_data_buffer.read_u16()?,
-                    block_data_buffer.read_tri_byte()?,
-                    block_data_buffer.read_u8()?,
-                )
-            };
+            let (next_entry_id, next_sequence, _next_block, next_index_id) = (
+                if large {
+                    block_data_buffer.read_u32()?
+                } else {
+                    block_data_buffer.read_u16()? as u32
+                },
+                block_data_buffer.read_u16()?,
+                block_data_buffer.read_tri_byte()?,
+                block_data_buffer.read_u8()?,
+            );
 
             let remaining_chunk_size_left = std::cmp::min(
                 remaining_bytes,
@@ -156,21 +151,23 @@ impl FileSystem {
                     block_data_buffer.read_bytes(remaining_chunk_size_left as usize)?[..].as_mut(),
                 )?;
 
-                remaining_bytes -= remaining_chunk_size_left;
-                block += 1;
-                current_sequence += 1;
-
                 // clear the block's data buffer by setting all of the underlying data to 0
                 // we don't want to use ByteBuffer.clear() because it truncates the underlying Vec
                 // we would have to resize the underlying Vec again which isn't efficient
-                block_data_buffer.set_wpos(0);
-                block_data_buffer.set_rpos(0);
+                block_data_buffer.set_wpos(0); // ensure the writing cursor position is at the beginning of the buffer
                 block_data_buffer.write_bytes(&[0; TOTAL_BLOCK_SIZE as usize]);
+                // prepares the block data buffer for the next block data to be read by
+                // resetting the buffer's reading and writing cursor positions
                 block_data_buffer.set_wpos(0);
                 block_data_buffer.set_rpos(0);
+
+                remaining_bytes -= remaining_chunk_size_left;
+                block += 1;
+                current_sequence += 1;
             }
         }
         block_data_buffer.clear();
+        println!("{:#?} \n {}", buffer, buffer.len());
         Ok(buffer)
     }
 }
