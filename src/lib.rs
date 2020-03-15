@@ -1,16 +1,16 @@
-mod filesystem;
 mod bytebuffer;
+mod filesystem;
 
 // TODO proper tests
 #[cfg(test)]
 mod tests {
-    use crate::filesystem::{FileSystem, Index, ARCHIVE_INDEX};
+    use crate::filesystem::{FileSystem, Index};
 
     #[test]
     fn wat() {
         let fs = FileSystem::new("./cache/").unwrap();
 
-     //   fs.read(ARCHIVE_INDEX, 1);
+        //   fs.read(ARCHIVE_INDEX, 1);
 
         /*
 

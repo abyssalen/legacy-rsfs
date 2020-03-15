@@ -6,6 +6,6 @@ pub trait ByteBufferExt {
 }
 impl ByteBufferExt for ByteBuffer {
     fn read_tri_byte(&mut self) -> Result<u32, Box<dyn Error>> {
-       unimplemented!("reading tri-byte is not implemented!")
+        unimplemented!("reading tri-byte is not implemented!")
     }
 }

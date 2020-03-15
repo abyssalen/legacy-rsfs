@@ -13,7 +13,6 @@ pub const INDEX_FILE_BLOCK_SIZE: u8 = 6;
 
 pub const TOTAL_BLOCK_LENGTH: u64 = 520;
 
-
 #[derive(Debug)]
 pub struct FileSystem {
     main_data_file: File,
@@ -21,13 +20,11 @@ pub struct FileSystem {
 }
 
 pub struct Index {
-    size:  u32,
+    size: u32,
     offset: usize,
 }
 
-impl Index {
-
-}
+impl Index {}
 
 impl FileSystem {
     pub fn new<P: AsRef<Path>>(base: P) -> Result<Self, Box<dyn Error>> {
@@ -46,9 +43,7 @@ impl FileSystem {
         indices.extend(
             (0..=MAX_INDEX_COUNT)
                 .filter(|index_id| index_file_path(index_id).exists())
-                .map(|index_id: u8| {
-                    (index_id, File::open(index_file_path(&index_id)).unwrap())
-                }),
+                .map(|index_id: u8| (index_id, File::open(index_file_path(&index_id)).unwrap())),
         );
 
         Ok(FileSystem {
@@ -56,5 +51,4 @@ impl FileSystem {
             indices,
         })
     }
-
 }
