@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
+// TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
 pub const DEFAULT_INDEX_FILE_PREFIX: &str = "main_file_cache.idx";
 pub const MAX_INDEX_COUNT: u8 = 255;
@@ -65,17 +66,13 @@ impl FileSystem {
         };
 
         let seek_from = SeekFrom::Start((entry_id as u64) * (INDEX_FILE_BLOCK_SIZE as u64));
-
         let mut buffer: [u8; INDEX_FILE_BLOCK_SIZE as usize] = [0; INDEX_FILE_BLOCK_SIZE as usize];
         index_file.seek(seek_from)?;
         index_file.read(&mut buffer)?;
 
         let mut buffer = ByteBuffer::from_bytes(&buffer);
-
         let size: u32 = buffer.read_tri_byte()?;
         let offset: u64 = buffer.read_tri_byte()? as u64;
-
-        println!("size: {}, offset: {}", size, offset);
 
         Ok(Index { size, offset })
     }
