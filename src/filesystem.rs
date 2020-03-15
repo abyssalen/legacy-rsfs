@@ -1,11 +1,12 @@
-use crate::bytebuffer::ByteBufferExt;
-use bytebuffer::ByteBuffer;
 use std::collections::HashMap;
 use std::error::Error;
-
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+
+use bytebuffer::ByteBuffer;
+
+use crate::bytebuffer::ByteBufferExt;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -25,6 +26,53 @@ pub struct IndexType(u8);
 pub struct FileSystem {
     main_data_file: File,
     indices: HashMap<u8, File>,
+}
+
+pub struct Archive {
+    entries: HashMap<i32, ArchiveEntry>,
+}
+
+pub struct ArchiveEntry {}
+
+impl Archive {
+    pub fn decode(buffer: Vec<u8>) -> Result<Archive, Box<dyn Error>> {
+        // TODO proper handling of errors
+        if buffer.is_empty() {
+            panic!("given archive is empty!");
+        }
+
+        let mut buffer = ByteBuffer::from_bytes(&buffer[..]);
+
+        let raw_size = buffer.read_tri_byte()?;
+        let real_size = buffer.read_tri_byte()?;
+
+        if raw_size != real_size {
+            // TODO extracting
+        }
+
+        let entries_count = buffer.read_u16()? as usize;
+
+        let mut identifiers: Vec<i32> = vec![0; entries_count];
+        let mut raw_sizes = vec![0; entries_count];
+        let mut real_sizes = vec![0; entries_count];
+
+        for entry_index_id in 0..entries_count {
+            identifiers[entry_index_id] = buffer.read_i32()?;
+            raw_sizes[entry_index_id] = buffer.read_tri_byte()?;
+            real_sizes[entry_index_id] = buffer.read_tri_byte()?;
+        }
+
+        // TODO bzip decompression
+
+        println!(
+            "identifiers: {:#?} raw_sizes: {:#?} real_sizes{:#?}",
+            identifiers, raw_sizes, real_sizes
+        );
+
+        Ok(Archive {
+            entries: Default::default(),
+        })
+    }
 }
 
 pub struct Index {
@@ -85,7 +133,7 @@ impl FileSystem {
         Ok(Index { size, offset })
     }
 
-    pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<ByteBuffer, Box<dyn Error>> {
+    pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<Vec<u8>, Box<dyn Error>> {
         // TODO should check for errors!!!
         let IndexType(index_id) = index_type;
         let index = self.get_index(&index_type, entry_id).unwrap();
@@ -168,6 +216,6 @@ impl FileSystem {
         }
         block_data_buffer.clear();
         println!("{:#?} \n {}", buffer, buffer.len());
-        Ok(buffer)
+        Ok(buffer.to_bytes())
     }
 }
