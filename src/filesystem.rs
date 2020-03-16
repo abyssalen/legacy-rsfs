@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use bytebuffer::ByteBuffer;
 
 use crate::bytebuffer::ByteBufferExt;
+use crate::compression;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -35,7 +36,7 @@ pub struct Archive {
 #[derive(Debug)]
 pub struct ArchiveEntry {
     identifier: i32,
-    data: Vec<u8>,
+    uncompressed_data: Vec<u8>,
 }
 
 impl Archive {
@@ -48,43 +49,52 @@ impl Archive {
         let mut buffer = ByteBuffer::from_bytes(&buffer[..]);
         let mut extracted = false;
 
-        let raw_size = buffer.read_tri_byte()?;
-        let real_size = buffer.read_tri_byte()?;
+        let uncompressed_size: usize = buffer.read_tri_byte()? as usize;
+        let real_size: usize = buffer.read_tri_byte()? as usize;
 
-        if raw_size != real_size {
-            // TODO extracting
+        if uncompressed_size != real_size {
+            let compressed_data = buffer.read_bytes(real_size)?;
+            buffer.clear();
+            buffer.write_bytes(&compression::decompress_bzip2(
+                compressed_data,
+                uncompressed_size,
+            )?);
             extracted = true;
         }
 
         let entries_count = buffer.read_u16()? as usize;
 
         let mut entries: HashMap<i32, ArchiveEntry> = HashMap::with_capacity(entries_count);
-
         let mut identifiers: Vec<i32> = vec![0; entries_count];
-        let mut raw_sizes = vec![0; entries_count];
-        let mut real_sizes = vec![0; entries_count];
+        let mut uncompressed_sizes = vec![0; entries_count];
+        let mut compressed_sizes = vec![0; entries_count];
 
         for entry_index_id in 0..entries_count {
             identifiers[entry_index_id] = buffer.read_i32()?;
-            raw_sizes[entry_index_id] = buffer.read_tri_byte()?;
-            real_sizes[entry_index_id] = buffer.read_tri_byte()?;
+            uncompressed_sizes[entry_index_id] = buffer.read_tri_byte()?;
+            compressed_sizes[entry_index_id] = buffer.read_tri_byte()?;
         }
 
+        // decompress the archive entries
         for entry_index_id in 0..entries_count {
-            let (identifier, raw_size, real_size) = (
+            let (identifier, uncompressed_size, compressed_size) = (
                 identifiers[entry_index_id],
-                raw_sizes[entry_index_id],
-                real_sizes[entry_index_id],
+                uncompressed_sizes[entry_index_id] as usize,
+                compressed_sizes[entry_index_id] as usize,
             );
-            let actual_entry_size = if extracted { raw_size } else { real_size };
-            let data = buffer.read_bytes(actual_entry_size as usize)?;
-            let uncompressed_data = data;
-            // TODO decompress the archive entries
+            let data = if extracted {
+                buffer.read_bytes(uncompressed_size)?
+            } else {
+                compression::decompress_bzip2(
+                    buffer.read_bytes(compressed_size)?,
+                    uncompressed_size,
+                )?
+            };
             entries.insert(
                 identifier,
                 ArchiveEntry {
                     identifier,
-                    data: uncompressed_data,
+                    uncompressed_data: data,
                 },
             );
         }

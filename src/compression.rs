@@ -36,27 +36,33 @@ pub fn decompress(data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
 
     // TODO checks
     let compression_type: CompressionType = CompressionType::get(buffer.read_u8()?);
-    let compressed_size = buffer.read_u32()?;
-    let decompressed_size = buffer.read_u32()?;
+    let compressed_size: usize = buffer.read_u32()? as usize;
+    let decompressed_size: usize = buffer.read_u32()? as usize;
 
     match compression_type {
         CompressionType::Bzip2 => {
-            let compressed_data: Vec<u8> = [
-                &BZIP2_HEADER,
-                buffer.read_bytes(compressed_size as usize)?.as_slice(),
-            ]
-            .concat();
-
-            let mut decompressor = BzDecoder::new(&compressed_data[..]);
-            let mut decompressed_data = vec![0; decompressed_size as usize];
-            decompressor.read_exact(&mut decompressed_data)?;
-            Ok(decompressed_data)
+            decompress_bzip2(buffer.read_bytes(compressed_size)?, decompressed_size)
         }
-
-        // TODO fix these placeholder empty Vecs
-        CompressionType::Gzip => Ok(vec![]),
-        CompressionType::None => Ok(vec![]),
+        CompressionType::Gzip => unimplemented!("gzip decompression is not implemented"),
+        CompressionType::None => unimplemented!("decompression of unknown type is not implemented"),
     }
+}
+
+pub fn decompress_bzip2(
+    compressed_data: Vec<u8>,
+    decompressed_size: usize,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    if compressed_data.is_empty() {
+        panic!("cannot decompress empty data")
+    }
+    if compressed_data.len() < 5 {
+        panic!("cannot decompress data with a length less than 5")
+    }
+    let compressed_data: Vec<u8> = [&BZIP2_HEADER, compressed_data.as_slice()].concat();
+    let mut decoder = BzDecoder::new(&compressed_data[..]);
+    let mut decompressed_data = vec![0; decompressed_size];
+    decoder.read_exact(&mut decompressed_data)?;
+    Ok(decompressed_data)
 }
 
 #[cfg(test)]
