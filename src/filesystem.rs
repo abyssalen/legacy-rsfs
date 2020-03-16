@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use bytebuffer::ByteBuffer;
 
 use crate::bytebuffer::ByteBufferExt;
+use crate::compression;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -28,11 +29,15 @@ pub struct FileSystem {
     indices: HashMap<u8, File>,
 }
 
+#[derive(Debug)]
 pub struct Archive {
     entries: HashMap<i32, ArchiveEntry>,
 }
-
-pub struct ArchiveEntry {}
+#[derive(Debug)]
+pub struct ArchiveEntry {
+    identifier: i32,
+    data: Vec<u8>,
+}
 
 impl Archive {
     pub fn decode(buffer: Vec<u8>) -> Result<Archive, Box<dyn Error>> {
@@ -42,15 +47,19 @@ impl Archive {
         }
 
         let mut buffer = ByteBuffer::from_bytes(&buffer[..]);
+        let mut extracted = false;
 
         let raw_size = buffer.read_tri_byte()?;
         let real_size = buffer.read_tri_byte()?;
 
         if raw_size != real_size {
             // TODO extracting
+            extracted = true;
         }
 
         let entries_count = buffer.read_u16()? as usize;
+
+        let mut entries: HashMap<i32, ArchiveEntry> = HashMap::with_capacity(entries_count);
 
         let mut identifiers: Vec<i32> = vec![0; entries_count];
         let mut raw_sizes = vec![0; entries_count];
@@ -62,16 +71,31 @@ impl Archive {
             real_sizes[entry_index_id] = buffer.read_tri_byte()?;
         }
 
-        // TODO bzip decompression
+        for entry_index_id in 0..entries_count {
+            let (identifier, raw_size, real_size) = (
+                identifiers[entry_index_id],
+                raw_sizes[entry_index_id],
+                real_sizes[entry_index_id],
+            );
+            let actual_entry_size = if extracted { raw_size } else { real_size };
+            let data = buffer.read_bytes(actual_entry_size as usize)?;
+            let uncompressed_data = if extracted {
+                data
+            } else {
+                compression::decompress(data)?
+            };
+            entries.insert(
+                identifier,
+                ArchiveEntry {
+                    identifier,
+                    data: uncompressed_data,
+                },
+            );
+        }
 
-        println!(
-            "identifiers: {:#?} raw_sizes: {:#?} real_sizes{:#?}",
-            identifiers, raw_sizes, real_sizes
-        );
+        println!("entry: {:#?}", entries);
 
-        Ok(Archive {
-            entries: Default::default(),
-        })
+        Ok(Archive { entries })
     }
 }
 
@@ -157,14 +181,14 @@ impl FileSystem {
             main_data_file.read(&mut block_data)?;
             block_data_buffer.write(&block_data)?;
 
-            let (next_entry_id, next_sequence, _next_block, next_index_id) = (
+            let (next_entry_id, next_sequence, next_block, next_index_id) = (
                 if large {
                     block_data_buffer.read_u32()?
                 } else {
                     block_data_buffer.read_u16()? as u32
                 },
                 block_data_buffer.read_u16()?,
-                block_data_buffer.read_tri_byte()?,
+                block_data_buffer.read_tri_byte()? as u64,
                 block_data_buffer.read_u8()?,
             );
 
@@ -210,12 +234,11 @@ impl FileSystem {
                 block_data_buffer.set_rpos(0);
 
                 remaining_bytes -= remaining_chunk_size_left;
-                block += 1;
+                block = next_block;
                 current_sequence += 1;
             }
         }
         block_data_buffer.clear();
-        println!("{:#?} \n {}", buffer, buffer.len());
         Ok(buffer.to_bytes())
     }
 }
