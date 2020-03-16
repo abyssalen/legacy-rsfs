@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use bytebuffer::ByteBuffer;
 
 use crate::bytebuffer::ByteBufferExt;
-use crate::compression;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -79,11 +78,8 @@ impl Archive {
             );
             let actual_entry_size = if extracted { raw_size } else { real_size };
             let data = buffer.read_bytes(actual_entry_size as usize)?;
-            let uncompressed_data = if extracted {
-                data
-            } else {
-                compression::decompress(data)?
-            };
+            let uncompressed_data = data;
+            // TODO decompress the archive entries
             entries.insert(
                 identifier,
                 ArchiveEntry {
@@ -92,9 +88,6 @@ impl Archive {
                 },
             );
         }
-
-        println!("entry: {:#?}", entries);
-
         Ok(Archive { entries })
     }
 }
