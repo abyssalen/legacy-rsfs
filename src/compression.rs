@@ -39,11 +39,6 @@ pub fn decompress(data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
     let compressed_size = buffer.read_u32()?;
     let decompressed_size = buffer.read_u32()?;
 
-    println!(
-        "{:#?} {} {}",
-        compression_type, compressed_size, decompressed_size
-    );
-
     match compression_type {
         CompressionType::Bzip2 => {
             let compressed_data: Vec<u8> = [
