@@ -117,34 +117,24 @@ impl Index {}
 impl FileSystem {
     pub fn new<P: AsRef<Path>>(base: P) -> Result<Self, Box<dyn Error>> {
         let path = base.as_ref();
-
         // TODO proper error checking
-
         let main_data_file = File::open(path.join(DEFAULT_DATA_FILE_NAME))?;
-
         let mut indices = HashMap::new();
-
         let index_file_path = |index_id: &u8| -> PathBuf {
             path.join(format!("{}{}", DEFAULT_INDEX_FILE_PREFIX, index_id))
         };
-
         indices.extend(
             (0..=MAX_INDEX_COUNT)
                 .filter(|index_id| index_file_path(index_id).exists())
                 .map(|index_id: u8| (index_id, File::open(index_file_path(&index_id)).unwrap())),
         );
-
         Ok(FileSystem {
             main_data_file,
             indices,
         })
     }
 
-    pub fn get_index(
-        &self,
-        index_type: &IndexType,
-        entry_id: u32,
-    ) -> Result<Index, Box<dyn Error>> {
+    pub fn get_index(&self, index_type: IndexType, entry_id: u32) -> Result<Index, Box<dyn Error>> {
         let IndexType(index_id) = index_type;
 
         let mut index_file = match self.indices.get(&index_id) {
@@ -168,7 +158,7 @@ impl FileSystem {
     pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<Vec<u8>, Box<dyn Error>> {
         // TODO should check for errors!!!
         let IndexType(index_id) = index_type;
-        let index = self.get_index(&index_type, entry_id).unwrap();
+        let index = self.get_index(index_type, entry_id).unwrap();
         let ref mut main_data_file = &self.main_data_file;
 
         let mut buffer: ByteBuffer = ByteBuffer::new();
@@ -180,7 +170,6 @@ impl FileSystem {
         let mut block = index.offset;
         let mut remaining_bytes = index.size;
         let mut current_sequence = 0;
-
         let large = entry_id > 65535;
 
         while remaining_bytes > 0 {
