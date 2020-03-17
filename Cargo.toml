@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 bzip2 = "0.3.3"
 bytebuffer-rs = "0.3.1"
+libflate = "0.1.27"

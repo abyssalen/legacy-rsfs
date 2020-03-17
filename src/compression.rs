@@ -103,7 +103,7 @@ pub fn decompress_gzip(compressed_data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Erro
     Ok(decompressed_buffer)
 }
 
-fn compress_gzip(data: &[u8]) -> Result<Vec<u8>, io::Error> {
+pub fn compress_gzip(data: &[u8]) -> Result<Vec<u8>, io::Error> {
     let mut encoder = Encoder::new(Vec::new()).unwrap();
     encoder.write_all(data);
     encoder.finish().into_result()
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn test_gzip_compress_and_decompress() {
+    fn test_gzip_compression() {
         let data = b"Hello world!";
         let compressed_data = compress_gzip(data).unwrap();
         let decompressed_data = decompress_gzip(compressed_data).unwrap();
