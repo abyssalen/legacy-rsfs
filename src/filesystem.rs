@@ -15,11 +15,16 @@ pub const DEFAULT_INDEX_FILE_PREFIX: &str = "main_file_cache.idx";
 pub const MAX_INDEX_COUNT: u8 = 255;
 pub const INDEX_FILE_BLOCK_SIZE: u8 = 6;
 pub const TOTAL_BLOCK_SIZE: u64 = 520;
-pub const ARCHIVE_INDEX_TYPE: IndexType = IndexType(0);
 pub const BLOCK_CHUNK_SIZE: u32 = 512;
 pub const BLOCK_CHUNK_LARGE_SIZE: u32 = 510;
 pub const BLOCK_HEADER_SIZE: u8 = 8;
 pub const BLOCK_HEADER_LARGE_SIZE: u8 = 10;
+
+pub const ARCHIVE_INDEX_TYPE: IndexType = IndexType(0);
+pub const MODEL_INDEX_TYPE: IndexType = IndexType(1);
+pub const ANIMATION_INDEX_TYPE: IndexType = IndexType(2);
+pub const MIDI_INDEX_TYPE: IndexType = IndexType(3);
+pub const MAP_INDEX_TYPE: IndexType = IndexType(4);
 
 pub struct IndexType(u8);
 
