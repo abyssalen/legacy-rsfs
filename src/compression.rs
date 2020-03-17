@@ -1,13 +1,15 @@
 use std::error::Error;
 use std::io::{Read, Write};
 
-use bzip2::read::BzDecoder;
+use bzip2::read::{BzDecoder, BzEncoder};
 use libflate::gzip::{Decoder, Encoder};
 
+use bzip2::Compression;
 use std::io;
 use std::result::Result::Ok;
 
-const BZIP2_HEADER: [u8; 4] = [b'B', b'Z', b'h', b'1'];
+const BZIP2_HEADER_SIZE: usize = 4;
+const BZIP2_HEADER: [u8; BZIP2_HEADER_SIZE] = [b'B', b'Z', b'h', b'1'];
 const GZIP_HEADER: u16 = 0x1F8B;
 const GZIP_CHUNK_READ_BUFFER_SIZE: usize = 512;
 
@@ -58,6 +60,14 @@ pub fn decompress_gzip(compressed_data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Erro
     Ok(decompressed_buffer)
 }
 
+pub fn compress_bzip2(data: &[u8]) -> Result<Vec<u8>, io::Error> {
+    let mut encoder = BzEncoder::new(data, Compression::Default);
+    let mut result = Vec::new();
+    encoder.read_to_end(&mut result)?;
+    result.drain(0..BZIP2_HEADER_SIZE);
+    Ok(result)
+}
+
 pub fn compress_gzip(data: &[u8]) -> Result<Vec<u8>, io::Error> {
     let mut encoder = Encoder::new(Vec::new()).unwrap();
     encoder.write_all(data)?;
@@ -66,13 +76,25 @@ pub fn compress_gzip(data: &[u8]) -> Result<Vec<u8>, io::Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::compression::{compress_gzip, decompress_gzip};
+    use crate::compression::{compress_bzip2, compress_gzip, decompress_bzip2, decompress_gzip};
 
     #[test]
     fn test_gzip_compression() {
         let data = b"Hello world!";
         let compressed_data = compress_gzip(data).unwrap();
         let decompressed_data = decompress_gzip(compressed_data).unwrap();
+        assert_eq!(
+            String::from_utf8(decompressed_data).unwrap(),
+            "Hello world!"
+        );
+    }
+
+    #[test]
+    fn test_bzip2_compression() {
+        let data = b"Hello world!";
+        let decompressed_size = data.len();
+        let compressed_data = compress_bzip2(data).unwrap();
+        let decompressed_data = decompress_bzip2(compressed_data, decompressed_size).unwrap();
         assert_eq!(
             String::from_utf8(decompressed_data).unwrap(),
             "Hello world!"
