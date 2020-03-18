@@ -1,5 +1,4 @@
 pub mod archive;
-mod bytebuffer;
 pub mod compression;
 pub mod filesystem;
 pub mod index;
