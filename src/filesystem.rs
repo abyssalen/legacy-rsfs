@@ -161,11 +161,7 @@ impl FileSystem {
         let index = self.get_index(index_type, entry_id).unwrap();
         let ref mut main_data_file = &self.main_data_file;
 
-        let mut buffer: ByteBuffer = ByteBuffer::new();
-        buffer.resize(index.size as usize);
-
-        let mut block_data_buffer = ByteBuffer::new();
-        block_data_buffer.resize(TOTAL_BLOCK_SIZE as usize);
+        let mut buffer: Vec<u8> = Vec::with_capacity(index.size as usize);
 
         let mut block = index.offset;
         let mut remaining_bytes = index.size;
@@ -176,18 +172,29 @@ impl FileSystem {
             let mut block_data: [u8; TOTAL_BLOCK_SIZE as usize] = [0; TOTAL_BLOCK_SIZE as usize];
             main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
             main_data_file.read(&mut block_data)?;
-            block_data_buffer.write(&block_data)?;
 
-            let (next_entry_id, next_sequence, next_block, next_index_id) = (
-                if large {
-                    block_data_buffer.read_u32()?
-                } else {
-                    block_data_buffer.read_u16()? as u32
-                },
-                block_data_buffer.read_u16()?,
-                block_data_buffer.read_tri_byte()? as u64,
-                block_data_buffer.read_u8()?,
-            );
+            let (next_entry_id, next_sequence, next_block, next_index_id) = if large {
+                (
+                    ((block_data[0] as u32) << 24)
+                        | ((block_data[1] as u32) << 16)
+                        | ((block_data[2] as u32) << 8)
+                        | (block_data[3] as u32),
+                    (((block_data[4] as u32) << 8) | (block_data[5] as u32)),
+                    ((block_data[6] as u64) << 16)
+                        | ((block_data[7] as u64) << 8)
+                        | (block_data[8] as u64),
+                    block_data[9] as u8,
+                )
+            } else {
+                (
+                    ((block_data[0] as u32) << 8) | (block_data[1] as u32),
+                    (((block_data[2] as u32) << 8) | (block_data[3] as u32)),
+                    ((block_data[4] as u64) << 16)
+                        | ((block_data[5] as u64) << 8)
+                        | (block_data[6] as u64),
+                    block_data[7] as u8,
+                )
+            };
 
             let remaining_chunk_size_left = std::cmp::min(
                 remaining_bytes,
@@ -217,25 +224,18 @@ impl FileSystem {
                 }
 
                 buffer.write(
-                    block_data_buffer.read_bytes(remaining_chunk_size_left as usize)?[..].as_mut(),
+                    &block_data[(if large {
+                        BLOCK_HEADER_LARGE_SIZE
+                    } else {
+                        BLOCK_HEADER_SIZE
+                    } as usize)..],
                 )?;
-
-                // clear the block's data buffer by setting all of the underlying data to 0
-                // we don't want to use ByteBuffer.clear() because it truncates the underlying Vec
-                // we would have to resize the underlying Vec again which isn't efficient
-                block_data_buffer.set_wpos(0); // ensure the writing cursor position is at the beginning of the buffer
-                block_data_buffer.write_bytes(&[0; TOTAL_BLOCK_SIZE as usize]);
-                // prepares the block data buffer for the next block data to be read by
-                // resetting the buffer's reading and writing cursor positions
-                block_data_buffer.set_wpos(0);
-                block_data_buffer.set_rpos(0);
 
                 remaining_bytes -= remaining_chunk_size_left;
                 block = next_block;
                 current_sequence += 1;
             }
         }
-        block_data_buffer.clear();
-        Ok(buffer.to_bytes())
+        Ok(buffer)
     }
 }
