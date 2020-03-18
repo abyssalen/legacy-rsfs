@@ -8,6 +8,7 @@ use bytebuffer::ByteBuffer;
 
 use crate::bytebuffer::ByteBufferExt;
 use crate::compression;
+use crate::str::StrExt;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -136,22 +137,18 @@ impl FileSystem {
 
     pub fn get_index(&self, index_type: IndexType, entry_id: u32) -> Result<Index, Box<dyn Error>> {
         let IndexType(index_id) = index_type;
-
         let mut index_file = match self.indices.get(&index_id) {
             Some(index_file) => index_file,
             // TODO actual error handling
             None => panic!("bro! can't get the index file rip"),
         };
-
         let seek_from = SeekFrom::Start((entry_id as u64) * (INDEX_FILE_BLOCK_SIZE as u64));
         let mut buffer: [u8; INDEX_FILE_BLOCK_SIZE as usize] = [0; INDEX_FILE_BLOCK_SIZE as usize];
         index_file.seek(seek_from)?;
         index_file.read(&mut buffer)?;
-
-        let mut buffer = ByteBuffer::from_bytes(&buffer);
-        let size: u32 = buffer.read_tri_byte()?;
-        let offset: u64 = buffer.read_tri_byte()? as u64;
-
+        let size: u32 = ((buffer[0] as u32) << 16) | ((buffer[1] as u32) << 8) | (buffer[2] as u32);
+        let offset: u64 =
+            ((buffer[3] as u64) << 16) | ((buffer[4] as u64) << 8) | (buffer[5] as u64);
         Ok(Index { size, offset })
     }
 
