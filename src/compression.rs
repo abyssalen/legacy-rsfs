@@ -2,9 +2,10 @@ use std::error::Error;
 use std::io::{Read, Write};
 
 use bzip2::read::{BzDecoder, BzEncoder};
-use libflate::gzip::{Decoder, Encoder};
+use flate2::write::GzEncoder;
 
 use bzip2::Compression;
+use flate2::read::GzDecoder;
 use std::io;
 use std::result::Result::Ok;
 
@@ -34,44 +35,28 @@ pub fn decompress_gzip(compressed_data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Erro
     if compressed_data.is_empty() {
         panic!("cannot decompress empty data")
     }
-
     let header = (compressed_data[0] as u16) << 8 | (compressed_data[1] as u16);
     if header != GZIP_HEADER {
         panic!("invalid gzip header")
     }
-
-    let mut decoder = Decoder::new(&compressed_data[..])?;
-    let mut decompressed_buffer = Vec::new();
-
-    loop {
-        let mut read_chunks: Vec<u8> = Vec::with_capacity(GZIP_CHUNK_READ_BUFFER_SIZE);
-        let read = decoder
-            .by_ref()
-            .take(GZIP_CHUNK_READ_BUFFER_SIZE as u64)
-            .read_to_end(&mut read_chunks)?;
-        if read == 0 {
-            break;
-        }
-        decompressed_buffer.append(&mut read_chunks);
-        if read < GZIP_CHUNK_READ_BUFFER_SIZE {
-            break;
-        }
-    }
-    Ok(decompressed_buffer)
+    let mut decoder = GzDecoder::new(&compressed_data[..]);
+    let mut result = Vec::with_capacity(compressed_data.len());
+    decoder.read_to_end(&mut result)?;
+    Ok(result)
 }
 
 pub fn compress_bzip2(data: &[u8]) -> Result<Vec<u8>, io::Error> {
     let mut encoder = BzEncoder::new(data, Compression::Default);
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(data.len());
     encoder.read_to_end(&mut result)?;
     result.drain(0..BZIP2_HEADER_SIZE);
     Ok(result)
 }
 
 pub fn compress_gzip(data: &[u8]) -> Result<Vec<u8>, io::Error> {
-    let mut encoder = Encoder::new(Vec::new()).unwrap();
+    let mut encoder = GzEncoder::new(Vec::new(), flate2::Compression::default());
     encoder.write_all(data)?;
-    encoder.finish().into_result()
+    encoder.finish()
 }
 
 #[cfg(test)]
