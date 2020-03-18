@@ -12,7 +12,6 @@ use std::result::Result::Ok;
 const BZIP2_HEADER_SIZE: usize = 4;
 const BZIP2_HEADER: [u8; BZIP2_HEADER_SIZE] = [b'B', b'Z', b'h', b'1'];
 const GZIP_HEADER: u16 = 0x1F8B;
-const GZIP_CHUNK_READ_BUFFER_SIZE: usize = 512;
 
 pub fn decompress_bzip2(
     compressed_data: Vec<u8>,
