@@ -16,9 +16,9 @@ pub const DEFAULT_INDEX_FILE_PREFIX: &str = "main_file_cache.idx";
 pub const MAX_INDEX_COUNT: u8 = 255;
 pub const TOTAL_BLOCK_SIZE: u64 = 520;
 pub const BLOCK_CHUNK_SIZE: u32 = 512;
-pub const BLOCK_CHUNK_LARGE_SIZE: u32 = 510;
+pub const BLOCK_CHUNK_EXTENDED_SIZE: u32 = 510;
 pub const BLOCK_HEADER_SIZE: usize = 8;
-pub const BLOCK_HEADER_LARGE_SIZE: usize = 10;
+pub const BLOCK_HEADER_EXTENDED_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub struct FileSystem {
@@ -38,7 +38,7 @@ impl TryFrom<&[u8]> for CacheSectorHeader {
 
     fn try_from(block_data: &[u8]) -> Result<Self, Self::Error> {
         let (next_entry_id, next_sequence, next_block, next_index_id) = match block_data.len() {
-            BLOCK_HEADER_LARGE_SIZE => (
+            BLOCK_HEADER_EXTENDED_SIZE => (
                 ((block_data[0] as u32) << 24)
                     | ((block_data[1] as u32) << 16)
                     | ((block_data[2] as u32) << 8)
@@ -116,14 +116,15 @@ impl FileSystem {
         let mut block = index_entry.offset();
         let mut remaining_bytes = index_entry.size();
         let mut current_sequence = 0;
-        let large = entry_id > 65535;
+        // if the entry id is larger than a unsigned short integer (65535)
+        let large = entry_id > u16::max_value() as u32;
         let block_header_size = if large {
-            BLOCK_HEADER_LARGE_SIZE
+            BLOCK_HEADER_EXTENDED_SIZE
         } else {
             BLOCK_HEADER_SIZE
         };
         let block_chunk_size = if large {
-            BLOCK_CHUNK_LARGE_SIZE
+            BLOCK_CHUNK_EXTENDED_SIZE
         } else {
             BLOCK_CHUNK_SIZE
         };
