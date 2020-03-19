@@ -17,13 +17,55 @@ pub const MAX_INDEX_COUNT: u8 = 255;
 pub const TOTAL_BLOCK_SIZE: u64 = 520;
 pub const BLOCK_CHUNK_SIZE: u32 = 512;
 pub const BLOCK_CHUNK_LARGE_SIZE: u32 = 510;
-pub const BLOCK_HEADER_SIZE: u8 = 8;
-pub const BLOCK_HEADER_LARGE_SIZE: u8 = 10;
+pub const BLOCK_HEADER_SIZE: usize = 8;
+pub const BLOCK_HEADER_LARGE_SIZE: usize = 10;
 
 #[derive(Debug)]
 pub struct FileSystem {
     main_data_file: File,
     indices: HashMap<u8, Index>,
+}
+
+struct CacheSectorHeader {
+    next_entry_id: u32,
+    next_sequence: u32,
+    next_block: u64,
+    next_index_id: u8,
+}
+
+impl TryFrom<&[u8]> for CacheSectorHeader {
+    type Error = Box<dyn Error>;
+
+    fn try_from(block_data: &[u8]) -> Result<Self, Self::Error> {
+        let (next_entry_id, next_sequence, next_block, next_index_id) = match block_data.len() {
+            BLOCK_HEADER_LARGE_SIZE => (
+                ((block_data[0] as u32) << 24)
+                    | ((block_data[1] as u32) << 16)
+                    | ((block_data[2] as u32) << 8)
+                    | (block_data[3] as u32),
+                (((block_data[4] as u32) << 8) | (block_data[5] as u32)),
+                ((block_data[6] as u64) << 16)
+                    | ((block_data[7] as u64) << 8)
+                    | (block_data[8] as u64),
+                block_data[9] as u8,
+            ),
+            BLOCK_HEADER_SIZE => (
+                ((block_data[0] as u32) << 8) | (block_data[1] as u32),
+                (((block_data[2] as u32) << 8) | (block_data[3] as u32)),
+                ((block_data[4] as u64) << 16)
+                    | ((block_data[5] as u64) << 8)
+                    | (block_data[6] as u64),
+                block_data[7] as u8,
+            ),
+            _ => panic!("invalid data block length given"),
+        };
+        Ok(CacheSectorHeader {
+            next_entry_id,
+            next_sequence,
+            next_block,
+            next_index_id,
+        })
+    }
 }
 
 impl FileSystem {
@@ -83,28 +125,13 @@ impl FileSystem {
             main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
             main_data_file.read(&mut block_data)?;
 
-            let (next_entry_id, next_sequence, next_block, next_index_id) = if large {
-                (
-                    ((block_data[0] as u32) << 24)
-                        | ((block_data[1] as u32) << 16)
-                        | ((block_data[2] as u32) << 8)
-                        | (block_data[3] as u32),
-                    (((block_data[4] as u32) << 8) | (block_data[5] as u32)),
-                    ((block_data[6] as u64) << 16)
-                        | ((block_data[7] as u64) << 8)
-                        | (block_data[8] as u64),
-                    block_data[9] as u8,
-                )
-            } else {
-                (
-                    ((block_data[0] as u32) << 8) | (block_data[1] as u32),
-                    (((block_data[2] as u32) << 8) | (block_data[3] as u32)),
-                    ((block_data[4] as u64) << 16)
-                        | ((block_data[5] as u64) << 8)
-                        | (block_data[6] as u64),
-                    block_data[7] as u8,
-                )
-            };
+            let sector_header = CacheSectorHeader::try_from(
+                &block_data[0..(if large {
+                    BLOCK_HEADER_LARGE_SIZE
+                } else {
+                    BLOCK_HEADER_SIZE
+                })],
+            )?;
 
             let remaining_chunk_size_left = std::cmp::min(
                 remaining_bytes,
@@ -118,25 +145,25 @@ impl FileSystem {
             if remaining_bytes > 0 {
                 // TODO proper error checking
 
-                if next_index_id != (index_id + 1) {
+                if sector_header.next_index_id != (index_id + 1) {
                     panic!(
                         "next index id: {} does not equal index id {}",
-                        next_index_id,
+                        sector_header.next_index_id,
                         (index_id + 1)
                     )
                 }
 
-                if next_sequence != current_sequence {
+                if sector_header.next_sequence != current_sequence {
                     panic!(
                         "next seq: {} does not equal cur seq {}",
-                        next_sequence, current_sequence
+                        sector_header.next_sequence, current_sequence
                     )
                 }
 
-                if next_entry_id != entry_id {
+                if sector_header.next_entry_id != entry_id {
                     panic!(
                         "next entry id: {} does not equal cur entry id {}",
-                        next_entry_id, entry_id
+                        sector_header.next_entry_id, entry_id
                     )
                 }
 
@@ -149,7 +176,7 @@ impl FileSystem {
                 )?;
 
                 remaining_bytes -= remaining_chunk_size_left;
-                block = next_block;
+                block = sector_header.next_block;
                 current_sequence += 1;
             }
         }
