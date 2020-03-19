@@ -112,39 +112,29 @@ impl FileSystem {
         let index_entry = index.entry(entry_id)?;
         let index_id = index.index_type().id();
         let ref mut main_data_file = &self.main_data_file;
-
         let mut buffer: Vec<u8> = Vec::with_capacity(index_entry.size() as usize);
-
         let mut block = index_entry.offset();
         let mut remaining_bytes = index_entry.size();
         let mut current_sequence = 0;
         let large = entry_id > 65535;
-
+        let block_header_size = if large {
+            BLOCK_HEADER_LARGE_SIZE
+        } else {
+            BLOCK_HEADER_SIZE
+        };
+        let block_chunk_size = if large {
+            BLOCK_CHUNK_LARGE_SIZE
+        } else {
+            BLOCK_CHUNK_SIZE
+        };
         while remaining_bytes > 0 {
             let mut block_data: [u8; TOTAL_BLOCK_SIZE as usize] = [0; TOTAL_BLOCK_SIZE as usize];
             main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
             main_data_file.read(&mut block_data)?;
-
-            let sector_header = CacheSectorHeader::try_from(
-                &block_data[0..(if large {
-                    BLOCK_HEADER_LARGE_SIZE
-                } else {
-                    BLOCK_HEADER_SIZE
-                })],
-            )?;
-
-            let remaining_chunk_size_left = std::cmp::min(
-                remaining_bytes,
-                if large {
-                    BLOCK_CHUNK_LARGE_SIZE
-                } else {
-                    BLOCK_CHUNK_SIZE
-                },
-            );
-
+            let sector_header = CacheSectorHeader::try_from(&block_data[0..block_header_size])?;
+            let remaining_chunk_size_left = std::cmp::min(remaining_bytes, block_chunk_size);
             if remaining_bytes > 0 {
                 // TODO proper error checking
-
                 if sector_header.next_index_id != (index_id + 1) {
                     panic!(
                         "next index id: {} does not equal index id {}",
@@ -152,29 +142,19 @@ impl FileSystem {
                         (index_id + 1)
                     )
                 }
-
                 if sector_header.next_sequence != current_sequence {
                     panic!(
                         "next seq: {} does not equal cur seq {}",
                         sector_header.next_sequence, current_sequence
                     )
                 }
-
                 if sector_header.next_entry_id != entry_id {
                     panic!(
                         "next entry id: {} does not equal cur entry id {}",
                         sector_header.next_entry_id, entry_id
                     )
                 }
-
-                buffer.write(
-                    &block_data[(if large {
-                        BLOCK_HEADER_LARGE_SIZE
-                    } else {
-                        BLOCK_HEADER_SIZE
-                    } as usize)..],
-                )?;
-
+                buffer.write(&block_data[block_header_size..])?;
                 remaining_bytes -= remaining_chunk_size_left;
                 block = sector_header.next_block;
                 current_sequence += 1;
