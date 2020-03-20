@@ -1,7 +1,8 @@
 # legacy-rsfs
 
-This library assists in reading and modifying data from RuneScape's legacy file system.
+This library assists in reading data from RuneScape's legacy file system.
 It aims to support the file system between the years 2005-2007. 
+Modifying data from the file system is not supported at this time but will be supported in the future.
 
 This library is currently being tested against revision 317.
 
