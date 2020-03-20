@@ -7,11 +7,11 @@ use std::io::{Read, Seek, SeekFrom};
 pub struct IndexType(u8);
 
 impl IndexType {
-    pub const ARCHIVE_INDEX_TYPE: IndexType = IndexType(0);
-    pub const MODEL_INDEX_TYPE: IndexType = IndexType(1);
-    pub const ANIMATION_INDEX_TYPE: IndexType = IndexType(2);
-    pub const MIDI_INDEX_TYPE: IndexType = IndexType(3);
-    pub const MAP_INDEX_TYPE: IndexType = IndexType(4);
+    pub const ARCHIVE: IndexType = IndexType(0);
+    pub const MODEL: IndexType = IndexType(1);
+    pub const ANIMATION: IndexType = IndexType(2);
+    pub const MIDI: IndexType = IndexType(3);
+    pub const MAP: IndexType = IndexType(4);
 
     pub fn new(index_id: u8) -> Self {
         IndexType(index_id)

@@ -56,10 +56,12 @@ Using the example from [Reading data from the cache](#reading-data-from-the-cach
 ```rust
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
+use crate::index::{Index, IndexType};
+
 
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
-let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
+let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
 ```
 
@@ -70,10 +72,11 @@ use std::fs::File;
 use std::io::Write;
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
+use crate::index::{Index, IndexType};
 
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
-let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
+let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
 // now we write the bytes to a new file on our computer
 let mut midi = File::create("17.mid")?;

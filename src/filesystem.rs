@@ -118,7 +118,7 @@ impl FileSystem {
     }
 
     pub fn read_archive(&self, entry_id: u32) -> Result<Archive, Box<dyn Error>> {
-        let file_data = self.read(IndexType::ARCHIVE_INDEX_TYPE, entry_id)?;
+        let file_data = self.read(IndexType::ARCHIVE, entry_id)?;
         Archive::try_from(file_data)
     }
 
