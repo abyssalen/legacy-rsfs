@@ -47,7 +47,7 @@ let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
 ```
 
 Note: files in indexes other than the `IndexType::ARCHIVE_INDEX_TYPE` are compressed with
-GZIP.
+GZIP. So in this case, the data that we just read (`read_data`) is compressed with GZIP.
 #### Decompressing data
 
 legacy-rsfs supports BZIP2 and GZIP for compression and decompression.
