@@ -1,14 +1,11 @@
+use crate::archive::Archive;
+use crate::index::{Index, IndexType};
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-
-use crate::archive::Archive;
-
-use crate::index::{Index, IndexType};
-
-use std::convert::TryFrom;
 
 // TODO should group these constants somehow
 pub const DEFAULT_DATA_FILE_NAME: &str = "main_file_cache.dat";
@@ -99,6 +96,15 @@ impl FileSystem {
             Some(index) => Ok(index),
             None => panic!("can't get the index {:#?}", index_type),
         }
+    }
+
+    pub fn file_count(&self, index_type: IndexType) -> Result<u64, Box<dyn Error>> {
+        let index = self.index(index_type)?;
+        Ok(index.file_count())
+    }
+
+    pub fn index_count(&self) -> u32 {
+        self.indices.len() as u32
     }
 
     pub fn read_archive(&self, entry_id: u32) -> Result<Archive, Box<dyn Error>> {
