@@ -37,6 +37,9 @@ let fs = FileSystem::new(your_path)?;
 ```
 
 #### Reading data from the cache
+
+Let's try to read a MIDI file from the cache:
+
 ```rust
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
@@ -44,13 +47,13 @@ let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
 ```
 
-Files that are in other indexes other than the `IndexType::ARCHIVE_INDEX_TYPE` are compressed with
+Note: files in indexes other than the `IndexType::ARCHIVE_INDEX_TYPE` are compressed with
 GZIP.
 #### Decompressing data
 
 legacy-rsfs supports BZIP2 and GZIP for compression and decompression.
 
-Using the same data from above, let's decompress it with GZIP as an example:
+Using the example from [Reading data from the cache](#reading-data-from-the-cache), let's decompress it with GZIP:
 ```rust
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
@@ -58,13 +61,16 @@ use legacy-rsfs::filesystem::FileSystem;
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
-let decompressed_data = compression::decompress_gzip(read_data)?;
-// since we are decompressing a MIDI file, we can just write it to our computer
-// to listen to it
-let mut midi = File::create("./dump/midi/17.mid")?;
-midi.write_all(&decompressed_data)?;
+let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
 ```
 
+Now we have the vector of bytes for the MIDI file, let's write it to our computer so we can listen to some nice RuneScape music:
+
+```rust
+let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
+let mut midi = File::create("17.mid")?;
+midi.write_all(&decompressed_data)?;
+```
 #### Accessing archive data
 
 Files in an `Archive` are compressed with BZIP2. 
