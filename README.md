@@ -44,8 +44,8 @@ let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
 ```
 
-Please note that the data may be compressed with BZIP2 or GZIP. In this case, the data is compressed with GZIP.
-
+Files that are in other indexes other than the `IndexType::ARCHIVE_INDEX_TYPE` are compressed with
+GZIP.
 #### Decompressing data
 
 legacy-rsfs supports BZIP2 and GZIP for compression and decompression.
@@ -67,7 +67,11 @@ midi.write_all(&decompressed_data)?;
 
 #### Accessing archive data
 
-Lets try to get the data for the RuneScape logo:
+Files in an `Archive` are compressed with BZIP2. 
+You do not need to manually decompress files inside an `Archive` because
+the library will automatically decompress them after accessing an `Archive`.
+
+Let's try to get the data for the RuneScape logo:
 
 ```rust
 let fs = FileSystem::new(your_path)?;
@@ -77,9 +81,7 @@ let archive: Archive = fs.read_archive(title_archive_id)?;
 // now find the logo that is inside the archive by using its name
 let logo_entry: &ArchiveEntry = archive.entry_name("logo.dat")?;
 ```
-Note: legacy-rsfs will automatically decompress all of the data inside an archive after accessing an archive.
-
-After accessing the logo entry, you can get its uncompressed data and do whatever you want with it:
+After accessing the logo entry, you can get its uncompressed bytes data and do whatever you want with it:
 
 ```rust
 let logo_entry: &ArchiveEntry = archive.entry_name("logo.dat")?;
