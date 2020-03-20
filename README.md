@@ -82,7 +82,7 @@ After accessing the logo entry, you can get its uncompressed data and do whateve
 
 ```rust
 let logo_entry: &ArchiveEntry = archive.entry_name("logo.dat")?;
-let uncompressed_bytes: &Vec<u8> = logo_entry.get_uncompressed_data();
+let uncompressed_bytes: &[u8] = logo_entry.get_uncompressed_data();
 ```
 
 More usage information will come as the library gets updated.

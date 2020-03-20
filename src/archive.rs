@@ -58,7 +58,7 @@ pub struct ArchiveEntry {
 }
 
 impl ArchiveEntry {
-    pub fn uncompressed_data(&self) -> &Vec<u8> {
+    pub fn uncompressed_data(&self) -> &[u8] {
         &self.uncompressed_data
     }
 
