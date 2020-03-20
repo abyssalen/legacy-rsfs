@@ -41,12 +41,15 @@ let fs = FileSystem::new(your_path)?;
 Let's try to read a MIDI file from the cache:
 
 ```rust
+use legacy-rsfs::filesystem::FileSystem;
+use legacy-rsfs::index::IndexType;
+
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
 ```
 
-Note: files in indexes other than the `IndexType::ARCHIVE_INDEX_TYPE` are compressed with
+Note: files in indexes other than the `IndexType::ARCHIVE` are compressed with
 GZIP. So in this case, the data that we just read (`read_data`) is compressed with GZIP.
 #### Decompressing data
 
@@ -56,7 +59,7 @@ Using the example from [Reading data from the cache](#reading-data-from-the-cach
 ```rust
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
-use crate::index::{Index, IndexType};
+use legacy-rsfs::index::IndexType;
 
 
 let fs = FileSystem::new(your_path)?;
