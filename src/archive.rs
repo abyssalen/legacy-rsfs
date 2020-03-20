@@ -1,10 +1,11 @@
 use crate::compression;
 use crate::str::StrExt;
 
+use crate::error::FileSystemError;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::error::Error;
+
 use std::io::{Cursor, Read};
 
 pub const ARCHIVE_HEADER_SIZE: usize = 6;
@@ -36,7 +37,7 @@ struct ArchiveHeader {
 }
 
 impl TryFrom<&[u8; ARCHIVE_HEADER_SIZE]> for ArchiveHeader {
-    type Error = Box<dyn Error>;
+    type Error = FileSystemError;
 
     fn try_from(value: &[u8; ARCHIVE_HEADER_SIZE]) -> Result<Self, Self::Error> {
         let mut cursor = Cursor::new(value);
@@ -68,19 +69,18 @@ impl ArchiveEntry {
 }
 
 impl TryFrom<Vec<u8>> for Archive {
-    type Error = Box<dyn Error>;
+    type Error = FileSystemError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-        // TODO proper handling of errors
         if buffer.is_empty() {
-            panic!("given archive is empty!");
+            return Err(FileSystemError::msg(
+                "Cannot decode empty buffer into an Archive.",
+            ));
         }
-
         let mut buffer = Cursor::new(buffer);
-
         let mut header: [u8; ARCHIVE_HEADER_SIZE] = [0; ARCHIVE_HEADER_SIZE];
         buffer.read_exact(&mut header)?;
-        let header = ArchiveHeader::try_from(&header).unwrap();
+        let header = ArchiveHeader::try_from(&header)?;
         let (decompressed_size, compressed_size) = (
             header.decompressed_size as usize,
             header.compressed_size as usize,
@@ -97,7 +97,6 @@ impl TryFrom<Vec<u8>> for Archive {
         }
 
         let entries_count = buffer.read_u16::<BigEndian>()? as usize;
-
         let mut entries: HashMap<i32, ArchiveEntry> = HashMap::with_capacity(entries_count);
         let mut identifiers: Vec<i32> = vec![0; entries_count];
         let mut uncompressed_sizes = vec![0; entries_count];

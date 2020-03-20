@@ -1,6 +1,7 @@
 use byteorder::{BigEndian, ReadBytesExt};
 
-use std::error::Error;
+use crate::error::FileSystemError;
+
 use std::io::Read;
 
 pub const DEFAULT_VERSION_ENTRY_NAMES: &'static [&'static str; 4] = &[
@@ -18,7 +19,7 @@ pub struct VersionList {
 }
 
 impl VersionList {
-    pub fn decode<R: Read>(reader: &mut R, len: usize) -> Result<Self, Box<dyn Error>> {
+    pub fn decode<R: Read>(reader: &mut R, len: usize) -> Result<Self, FileSystemError> {
         let count = len / 2;
         let mut versions: Vec<u32> = vec![0; count];
         for i in 0..count {
@@ -42,7 +43,7 @@ pub struct CrcList {
 }
 
 impl CrcList {
-    pub fn decode<R: Read>(reader: &mut R, len: usize) -> Result<Self, Box<dyn Error>> {
+    pub fn decode<R: Read>(reader: &mut R, len: usize) -> Result<Self, FileSystemError> {
         let count = len / 4;
         let mut crcs: Vec<u32> = vec![0; count];
         for i in 0..count {

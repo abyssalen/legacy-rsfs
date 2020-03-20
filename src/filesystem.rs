@@ -5,7 +5,6 @@ use crate::index::{Index, IndexType};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -117,8 +116,12 @@ impl FileSystem {
         self.indices.len() as u32
     }
 
-    pub fn read_archive(&self, entry_id: u32) -> Result<Archive, Box<dyn Error>> {
-        let file_data = self.read(IndexType::ARCHIVE, entry_id)?;
+    pub fn read_archive(&self, entry_id: u32) -> Result<Archive, FileSystemError> {
+        let file_data = self.read(IndexType::ARCHIVE, entry_id);
+        let file_data = match file_data {
+            Ok(file_data) => file_data,
+            Err(_) => return Err(FileSystemError::archive_not_found(entry_id)),
+        };
         Archive::try_from(file_data)
     }
 

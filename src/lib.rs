@@ -12,22 +12,30 @@ mod tests {
 
     use crate::compression::decompress_gzip;
     use crate::filesystem::FileSystem;
-    use crate::index::{Index, IndexType};
+    use crate::index::IndexType;
+    use crate::versionlist::VersionList;
+
     use std::fs::File;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
 
     #[test]
     fn archive_decoding() {
         let fs = FileSystem::new("./data/cache/").unwrap();
         let archive = fs.read_archive(5).unwrap();
         let anim_crc = archive.entry_name("anim_crc").unwrap();
-        let data = anim_crc.uncompressed_data();
+        let _data = anim_crc.uncompressed_data();
     }
 
     #[test]
     fn error_testing() {
-        //    let fs = FileSystem::new("./data/cache/").unwrap();
-        //fs.file_count(IndexType::new(011)).unwrap();
+        let fs = FileSystem::new("./data/cache/").unwrap();
+        let version_id = 5;
+
+        let anim_version = fs.read_archive(version_id).unwrap();
+        let _anim_version = anim_version.entry_name("anim_version").unwrap();
+        let anim_version = VersionList::decode(&mut Cursor::new([9]), 5).unwrap();
+
+        println!("{:?}", anim_version);
     }
 
     #[test]

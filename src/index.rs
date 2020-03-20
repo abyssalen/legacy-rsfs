@@ -1,6 +1,6 @@
 use crate::error::FileSystemError;
 
-use std::fs::{File, Metadata};
+use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
 #[derive(Debug)]

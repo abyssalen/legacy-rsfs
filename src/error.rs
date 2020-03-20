@@ -9,12 +9,18 @@ pub struct FileSystemError {
 }
 
 #[derive(Debug)]
-enum FileSystemErrorKind {
+pub enum FileSystemErrorKind {
     Msg(String),
     Io(io::Error),
     MainCacheFileNotFound(io::Error, PathBuf),
     IndexNotFound(IndexType),
     IndexEntryNotFound(u32),
+    ArchiveNotFound(u32),
+    DecompressEmptyBuffer,
+    InvalidGzipHeader,
+
+    #[doc(hidden)]
+    __Nonexhaustive,
 }
 
 impl FileSystemError {
@@ -29,16 +35,27 @@ impl FileSystemError {
     pub(crate) fn io(ioerr: io::Error) -> Self {
         Self::new(FileSystemErrorKind::Io(ioerr))
     }
-
     pub(crate) fn main_cache_file_not_found(ioerr: io::Error, path_buf: PathBuf) -> Self {
         Self::new(FileSystemErrorKind::MainCacheFileNotFound(ioerr, path_buf))
     }
-
     pub(crate) fn index_not_found(index_type: IndexType) -> Self {
         Self::new(FileSystemErrorKind::IndexNotFound(index_type))
     }
     pub(crate) fn index_entry_not_found(entry_id: u32) -> Self {
         Self::new(FileSystemErrorKind::IndexEntryNotFound(entry_id))
+    }
+    pub(crate) fn archive_not_found(archive_id: u32) -> Self {
+        Self::new(FileSystemErrorKind::ArchiveNotFound(archive_id))
+    }
+    pub(crate) fn decompress_empty_buffer() -> Self {
+        Self::new(FileSystemErrorKind::DecompressEmptyBuffer)
+    }
+    pub(crate) fn invalid_gzip_header() -> Self {
+        Self::new(FileSystemErrorKind::InvalidGzipHeader)
+    }
+
+    pub fn kind(&self) -> &FileSystemErrorKind {
+        &self.kind
     }
 }
 
@@ -62,14 +79,22 @@ impl fmt::Display for FileSystemError {
             FileSystemErrorKind::IndexEntryNotFound(ref entry_id) => {
                 write!(f, "Index Entry {} was not found.", entry_id)
             }
+            FileSystemErrorKind::ArchiveNotFound(ref archive_id) => {
+                write!(f, "Archive {} was not found.", archive_id)
+            }
+            FileSystemErrorKind::DecompressEmptyBuffer => {
+                write!(f, "Cannot decompress empty buffer.")
+            }
+            FileSystemErrorKind::InvalidGzipHeader => {
+                write!(f, "Given data has an invalid GZIP header.")
+            }
+            FileSystemErrorKind::__Nonexhaustive => unreachable!(),
         }
     }
 }
 
 impl From<io::Error> for FileSystemError {
     fn from(ioerr: io::Error) -> FileSystemError {
-        FileSystemError {
-            kind: FileSystemErrorKind::Io(ioerr),
-        }
+        FileSystemError::io(ioerr)
     }
 }

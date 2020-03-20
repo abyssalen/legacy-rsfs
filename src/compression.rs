@@ -1,13 +1,14 @@
-use std::error::Error;
 use std::io::{Read, Write};
 
 use bzip2::read::{BzDecoder, BzEncoder};
 use flate2::write::GzEncoder;
 
+use crate::error::FileSystemError;
 use bzip2::Compression;
 use flate2::read::GzDecoder;
+
 use std::io;
-use std::result::Result::Ok;
+use std::result::Result::{Err, Ok};
 
 const BZIP2_HEADER_SIZE: usize = 4;
 const BZIP2_HEADER: [u8; BZIP2_HEADER_SIZE] = [b'B', b'Z', b'h', b'1'];
@@ -16,12 +17,14 @@ const GZIP_HEADER: u16 = 0x1F8B;
 pub fn decompress_bzip2(
     compressed_data: Vec<u8>,
     decompressed_size: usize,
-) -> Result<Vec<u8>, Box<dyn Error>> {
+) -> Result<Vec<u8>, FileSystemError> {
     if compressed_data.is_empty() {
-        panic!("cannot decompress empty data")
+        return Err(FileSystemError::decompress_empty_buffer());
     }
     if compressed_data.len() < 5 {
-        panic!("cannot decompress data with a length less than 5")
+        return Err(FileSystemError::msg(
+            "Given compressed data length is less than 5!",
+        ));
     }
     let compressed_data: Vec<u8> = [&BZIP2_HEADER, compressed_data.as_slice()].concat();
     let mut decoder = BzDecoder::new(&compressed_data[..]);
@@ -30,13 +33,13 @@ pub fn decompress_bzip2(
     Ok(decompressed_data)
 }
 
-pub fn decompress_gzip(compressed_data: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn decompress_gzip(compressed_data: Vec<u8>) -> Result<Vec<u8>, FileSystemError> {
     if compressed_data.is_empty() {
-        panic!("cannot decompress empty data")
+        return Err(FileSystemError::decompress_empty_buffer());
     }
     let header = (compressed_data[0] as u16) << 8 | (compressed_data[1] as u16);
     if header != GZIP_HEADER {
-        panic!("invalid gzip header")
+        return Err(FileSystemError::invalid_gzip_header());
     }
     let mut decoder = GzDecoder::new(&compressed_data[..]);
     let mut result = Vec::with_capacity(compressed_data.len());
