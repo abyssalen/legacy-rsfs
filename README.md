@@ -49,7 +49,7 @@ use legacy-rsfs::index::IndexType;
 
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
-let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
+let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 ```
 
 Note: files in indexes other than the `IndexType::ARCHIVE` are compressed with
