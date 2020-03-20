@@ -50,7 +50,7 @@ Please note that the data may be compressed with BZIP2 or GZIP. In this case, th
 
 legacy-rsfs supports BZIP2 and GZIP for compression and decompression.
 
-Using the same data from above, lets decompress it with GZIP as an example:
+Using the same data from above, let's decompress it with GZIP as an example:
 ```rust
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
