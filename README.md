@@ -33,6 +33,7 @@ This library is currently being tested against revision 317.
 ```rust
 use legacy-rsfs::filesystem::FileSystem;
 
+
 let fs = FileSystem::new(your_path)?;
 ```
 
@@ -43,6 +44,7 @@ Let's try to read a MIDI file from the cache:
 ```rust
 use legacy-rsfs::filesystem::FileSystem;
 use legacy-rsfs::index::IndexType;
+
 
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
@@ -75,7 +77,8 @@ use std::fs::File;
 use std::io::Write;
 use legacy-rsfs::compression;
 use legacy-rsfs::filesystem::FileSystem;
-use crate::index::{Index, IndexType};
+use legacy-rsfs::index::IndexType;
+
 
 let fs = FileSystem::new(your_path)?;
 let file_entry_id: u32 = 17;
