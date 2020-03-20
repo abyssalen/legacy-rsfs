@@ -1,6 +1,6 @@
-use std::convert::TryFrom;
-use std::error::Error;
-use std::fs::File;
+use crate::error::FileSystemError;
+
+use std::fs::{File, Metadata};
 use std::io::{Read, Seek, SeekFrom};
 
 #[derive(Debug)]
@@ -38,9 +38,14 @@ impl Index {
         }
     }
 
-    pub fn entry(&self, entry_id: u32) -> Result<IndexEntry, Box<dyn Error>> {
+    pub fn entry(&self, entry_id: u32) -> Result<IndexEntry, FileSystemError> {
+        let ptr = (entry_id as u64) * (Index::SIZE as u64);
+        // TODO wow this is slow! Calculate it beforehand or checking this every time makes the reading slow
+        //if ptr >= self.index_file_size() {
+        //    return Err(FileSystemError::index_entry_not_found(entry_id));
+        //}
         let mut index_file = &self.file;
-        let seek_from = SeekFrom::Start((entry_id as u64) * (Index::SIZE as u64));
+        let seek_from = SeekFrom::Start(ptr);
         let mut buffer: [u8; Index::SIZE as usize] = [0; Index::SIZE as usize];
         index_file.seek(seek_from)?;
         index_file.read(&mut buffer)?;
@@ -55,7 +60,11 @@ impl Index {
     }
 
     pub fn file_count(&self) -> u64 {
-        self.file.metadata().unwrap().len() / Index::SIZE as u64
+        self.index_file_size() / Index::SIZE as u64
+    }
+
+    pub fn index_file_size(&self) -> u64 {
+        self.file.metadata().unwrap().len()
     }
 }
 

@@ -1,7 +1,10 @@
 use crate::archive::Archive;
+use crate::error::FileSystemError;
 use crate::index::{Index, IndexType};
+
 use std::collections::HashMap;
 use std::convert::TryFrom;
+
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -31,7 +34,7 @@ struct CacheSectorHeader {
 }
 
 impl TryFrom<&[u8]> for CacheSectorHeader {
-    type Error = Box<dyn Error>;
+    type Error = FileSystemError;
 
     fn try_from(block_data: &[u8]) -> Result<Self, Self::Error> {
         let (next_entry_id, next_sequence, next_block, next_index_id) = match block_data.len() {
@@ -54,7 +57,12 @@ impl TryFrom<&[u8]> for CacheSectorHeader {
                     | (block_data[6] as u64),
                 block_data[7] as u8,
             ),
-            _ => panic!("invalid data block length given"),
+            _ => {
+                return Err(FileSystemError::msg(format!(
+                    "Block header has invalid length of {}.",
+                    block_data.len()
+                )))
+            }
         };
         Ok(CacheSectorHeader {
             next_entry_id,
@@ -66,10 +74,12 @@ impl TryFrom<&[u8]> for CacheSectorHeader {
 }
 
 impl FileSystem {
-    pub fn new<P: AsRef<Path>>(base: P) -> Result<Self, Box<dyn Error>> {
+    pub fn new<P: AsRef<Path>>(base: P) -> Result<Self, FileSystemError> {
         let path = base.as_ref();
-        // TODO proper error checking
-        let main_data_file = File::open(path.join(DEFAULT_DATA_FILE_NAME))?;
+        let main_data_file_path = &path.join(DEFAULT_DATA_FILE_NAME);
+        let main_data_file = File::open(main_data_file_path).map_err(|e| {
+            FileSystemError::main_cache_file_not_found(e, PathBuf::from(&main_data_file_path))
+        })?;
         let mut indices = HashMap::new();
         let index_file_path = |index_id: &u8| -> PathBuf {
             path.join(format!("{}{}", DEFAULT_INDEX_FILE_PREFIX, index_id))
@@ -90,15 +100,15 @@ impl FileSystem {
         })
     }
 
-    pub fn index(&self, index_type: IndexType) -> Result<&Index, Box<dyn Error>> {
+    pub fn index(&self, index_type: IndexType) -> Result<&Index, FileSystemError> {
         let index_id = index_type.id();
         match self.indices.get(&index_id) {
             Some(index) => Ok(index),
-            None => panic!("can't get the index {:#?}", index_type),
+            None => Err(FileSystemError::index_not_found(index_type)),
         }
     }
 
-    pub fn file_count(&self, index_type: IndexType) -> Result<u64, Box<dyn Error>> {
+    pub fn file_count(&self, index_type: IndexType) -> Result<u64, FileSystemError> {
         let index = self.index(index_type)?;
         Ok(index.file_count())
     }
@@ -112,8 +122,7 @@ impl FileSystem {
         Archive::try_from(file_data)
     }
 
-    pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<Vec<u8>, Box<dyn Error>> {
-        // TODO should check for errors!!!
+    pub fn read(&self, index_type: IndexType, entry_id: u32) -> Result<Vec<u8>, FileSystemError> {
         let index = self.index(index_type)?;
         let index_entry = index.entry(entry_id)?;
         let index_id = index.index_type().id();
@@ -139,30 +148,30 @@ impl FileSystem {
             main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
             main_data_file.read(&mut block_data)?;
             let sector_header = CacheSectorHeader::try_from(&block_data[0..block_header_size])?;
-            let remaining_chunk_size_left = std::cmp::min(remaining_bytes, block_chunk_size);
+            let chunks_consumed = std::cmp::min(remaining_bytes, block_chunk_size);
             if remaining_bytes > 0 {
                 // TODO proper error checking
                 if sector_header.next_index_id != (index_id + 1) {
-                    panic!(
-                        "next index id: {} does not equal index id {}",
-                        sector_header.next_index_id,
-                        (index_id + 1)
-                    )
+                    return Err(FileSystemError::msg(format!(
+                        "Index id mismatch. Expected: {}, actual: {}.",
+                        (index_id + 1),
+                        sector_header.next_index_id
+                    )));
                 }
                 if sector_header.next_sequence != current_sequence {
-                    panic!(
-                        "next seq: {} does not equal cur seq {}",
-                        sector_header.next_sequence, current_sequence
-                    )
+                    return Err(FileSystemError::msg(format!(
+                        "Sequence block mismatch. Expected {}, actual: {}.",
+                        current_sequence, sector_header.next_sequence,
+                    )));
                 }
                 if sector_header.next_entry_id != entry_id {
-                    panic!(
-                        "next entry id: {} does not equal cur entry id {}",
-                        sector_header.next_entry_id, entry_id
-                    )
+                    return Err(FileSystemError::msg(format!(
+                        "File entry id mismatch. Expected {}, actual: {}.",
+                        entry_id, sector_header.next_entry_id,
+                    )));
                 }
                 buffer.write(&block_data[block_header_size..])?;
-                remaining_bytes -= remaining_chunk_size_left;
+                remaining_bytes -= chunks_consumed;
                 block = sector_header.next_block;
                 current_sequence += 1;
             }
