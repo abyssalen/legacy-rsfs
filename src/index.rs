@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -12,6 +13,10 @@ impl IndexType {
     pub const MIDI_INDEX_TYPE: IndexType = IndexType(3);
     pub const MAP_INDEX_TYPE: IndexType = IndexType(4);
 
+    pub fn new(index_id: u8) -> Self {
+        IndexType(index_id)
+    }
+
     pub fn id(&self) -> u8 {
         self.0
     }
@@ -24,7 +29,7 @@ pub struct Index {
 }
 
 impl Index {
-    pub const INDEX_SIZE: u8 = 6;
+    pub const SIZE: u8 = 6;
 
     pub fn new(index_id: u8, file: File) -> Self {
         Index {
@@ -35,8 +40,8 @@ impl Index {
 
     pub fn entry(&self, entry_id: u32) -> Result<IndexEntry, Box<dyn Error>> {
         let mut index_file = &self.file;
-        let seek_from = SeekFrom::Start((entry_id as u64) * (Index::INDEX_SIZE as u64));
-        let mut buffer: [u8; Index::INDEX_SIZE as usize] = [0; Index::INDEX_SIZE as usize];
+        let seek_from = SeekFrom::Start((entry_id as u64) * (Index::SIZE as u64));
+        let mut buffer: [u8; Index::SIZE as usize] = [0; Index::SIZE as usize];
         index_file.seek(seek_from)?;
         index_file.read(&mut buffer)?;
         let size: u32 = ((buffer[0] as u32) << 16) | ((buffer[1] as u32) << 8) | (buffer[2] as u32);
@@ -50,7 +55,7 @@ impl Index {
     }
 
     pub fn file_count(&self) -> u64 {
-        self.file.metadata().unwrap().len() / Index::INDEX_SIZE as u64
+        self.file.metadata().unwrap().len() / Index::SIZE as u64
     }
 }
 
