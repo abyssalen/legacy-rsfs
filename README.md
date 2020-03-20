@@ -48,7 +48,7 @@ Please note that the data may be compressed with BZIP2 or GZIP. In this case, th
 
 #### Decompressing data
 
-legacy-rsfs supports BZIP2 compression and decompression.
+legacy-rsfs supports BZIP2 and GZIP for compression and decompression.
 
 Using the same data from above, lets decompress it with GZIP as an example:
 ```rust
@@ -67,16 +67,17 @@ midi.write_all(&decompressed_data)?;
 
 #### Accessing archive data
 
-legacy-rsfs will automatically decompress all of the data inside an archive after accessing an archive.
-
 Lets try to get the data for the RuneScape logo:
 
 ```rust
 let fs = FileSystem::new(your_path)?;
 let title_archive_id = 1;
+// let's open the Title archive
 let archive: Archive = fs.read_archive(title_archive_id)?;
+// now find the logo that is inside the archive by using its name
 let logo_entry: &ArchiveEntry = archive.entry_name("logo.dat")?;
 ```
+Note: legacy-rsfs will automatically decompress all of the data inside an archive after accessing an archive.
 
 After accessing the logo entry, you can get its uncompressed data and do whatever you want with it:
 
