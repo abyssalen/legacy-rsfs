@@ -26,24 +26,26 @@ impl IndexType {
 pub struct Index {
     index_type: IndexType,
     file: File,
+    file_size: u64,
 }
 
 impl Index {
     pub const SIZE: u8 = 6;
 
-    pub fn new(index_id: u8, file: File) -> Self {
+    pub(crate) fn new(index_id: u8, file: File) -> Self {
+        let file_size = file.metadata().unwrap().len();
         Index {
             index_type: IndexType(index_id),
             file,
+            file_size,
         }
     }
 
     pub fn entry(&self, entry_id: u32) -> Result<IndexEntry, FileSystemError> {
         let ptr = (entry_id as u64) * (Index::SIZE as u64);
-        // TODO wow this is slow! Calculate it beforehand or checking this every time makes the reading slow
-        //if ptr >= self.index_file_size() {
-        //    return Err(FileSystemError::index_entry_not_found(entry_id));
-        //}
+        if ptr >= self.file_size {
+            return Err(FileSystemError::index_entry_not_found(entry_id));
+        }
         let mut index_file = &self.file;
         let seek_from = SeekFrom::Start(ptr);
         let mut buffer: [u8; Index::SIZE as usize] = [0; Index::SIZE as usize];
@@ -60,11 +62,7 @@ impl Index {
     }
 
     pub fn file_count(&self) -> u64 {
-        self.index_file_size() / Index::SIZE as u64
-    }
-
-    pub fn index_file_size(&self) -> u64 {
-        self.file.metadata().unwrap().len()
+        self.file_size / Index::SIZE as u64
     }
 }
 
