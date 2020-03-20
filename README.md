@@ -68,8 +68,14 @@ Now we have the vector of bytes for the MIDI file (`decompressed_data`), let's w
 ```rust
 use std::fs::File;
 use std::io::Write;
+use legacy-rsfs::compression;
+use legacy-rsfs::filesystem::FileSystem;
 
-...
+let fs = FileSystem::new(your_path)?;
+let file_entry_id: u32 = 17;
+let read_data: Vec<u8> = fs.read(IndexType::MIDI_INDEX_TYPE, file_entry_id)?;
+let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
+// now we write the bytes to a new file on our computer
 let mut midi = File::create("17.mid")?;
 midi.write_all(&decompressed_data)?;
 ```
