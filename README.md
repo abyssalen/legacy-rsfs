@@ -35,7 +35,7 @@ This library is currently being tested against revision 317.
 use legacy-rsfs::filesystem::FileSystem;
 
 
-let fs = FileSystem::new(your_path)?;
+let fs = FileSystem::new("path_to_your_cache")?;
 ```
 
 #### Reading data from the cache
