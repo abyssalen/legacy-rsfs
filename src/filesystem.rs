@@ -1,9 +1,10 @@
 use crate::archive::Archive;
-use crate::error::FileSystemError;
 use crate::index::{Index, IndexType};
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
+
+use crate::errors::FileSystemError;
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -56,12 +57,7 @@ impl TryFrom<&[u8]> for CacheSectorHeader {
                     | (block_data[6] as u64),
                 block_data[7] as u8,
             ),
-            _ => {
-                return Err(FileSystemError::msg(format!(
-                    "Block header has invalid length of {}.",
-                    block_data.len()
-                )))
-            }
+            other => return Err(FileSystemError::InvalidBlockHeaderLength(other)),
         };
         Ok(CacheSectorHeader {
             next_entry_id,
@@ -77,7 +73,10 @@ impl FileSystem {
         let path = base.as_ref();
         let main_data_file_path = &path.join(DEFAULT_DATA_FILE_NAME);
         let main_data_file = File::open(main_data_file_path).map_err(|e| {
-            FileSystemError::main_cache_file_not_found(e, PathBuf::from(&main_data_file_path))
+            FileSystemError::DataFileNotFound(format!(
+                "Problem loading {}. {}",
+                DEFAULT_DATA_FILE_NAME, e
+            ))
         })?;
         let mut indices = HashMap::new();
         let index_file_path = |index_id: &u8| -> PathBuf {
@@ -103,7 +102,7 @@ impl FileSystem {
         let index_id = index_type.id();
         match self.indices.get(&index_id) {
             Some(index) => Ok(index),
-            None => Err(FileSystemError::index_not_found(index_type)),
+            None => Err(FileSystemError::IndexNotFound { index_type }),
         }
     }
 
@@ -120,7 +119,7 @@ impl FileSystem {
         let file_data = self.read(IndexType::ARCHIVE, entry_id);
         let file_data = match file_data {
             Ok(file_data) => file_data,
-            Err(_) => return Err(FileSystemError::archive_not_found(entry_id)),
+            Err(_) => return Err(FileSystemError::ArchiveNotFound(entry_id)),
         };
         Archive::try_from(file_data)
     }
@@ -153,25 +152,26 @@ impl FileSystem {
             let sector_header = CacheSectorHeader::try_from(&block_data[0..block_header_size])?;
             let chunks_consumed = std::cmp::min(remaining_bytes, block_chunk_size);
             if remaining_bytes > 0 {
-                // TODO proper error checking
                 if sector_header.next_index_id != (index_id + 1) {
-                    return Err(FileSystemError::msg(format!(
-                        "Index id mismatch. Expected: {}, actual: {}.",
-                        (index_id + 1),
-                        sector_header.next_index_id
-                    )));
+                    return Err(FileSystemError::SectorReadingDataMismatch {
+                        data_type: "index id".to_owned(),
+                        expected: (index_id + 1) as usize,
+                        actual: sector_header.next_index_id as usize,
+                    });
                 }
                 if sector_header.next_sequence != current_sequence {
-                    return Err(FileSystemError::msg(format!(
-                        "Sequence block mismatch. Expected {}, actual: {}.",
-                        current_sequence, sector_header.next_sequence,
-                    )));
+                    return Err(FileSystemError::SectorReadingDataMismatch {
+                        data_type: "sequence block".to_owned(),
+                        expected: current_sequence as usize,
+                        actual: sector_header.next_sequence as usize,
+                    });
                 }
                 if sector_header.next_entry_id != entry_id {
-                    return Err(FileSystemError::msg(format!(
-                        "File entry id mismatch. Expected {}, actual: {}.",
-                        entry_id, sector_header.next_entry_id,
-                    )));
+                    return Err(FileSystemError::SectorReadingDataMismatch {
+                        data_type: "file entry id".to_owned(),
+                        expected: entry_id as usize,
+                        actual: sector_header.next_entry_id as usize,
+                    });
                 }
                 buffer.write(&block_data[block_header_size..])?;
                 remaining_bytes -= chunks_consumed;

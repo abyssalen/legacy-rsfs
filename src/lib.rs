@@ -1,6 +1,6 @@
 pub mod archive;
 pub mod compression;
-pub mod error;
+mod errors;
 pub mod filesystem;
 pub mod index;
 mod str;
@@ -10,13 +10,12 @@ mod versionlist;
 #[cfg(test)]
 mod tests {
 
-    use crate::compression::decompress_gzip;
+    use crate::compression::{decompress_bzip2, decompress_gzip};
     use crate::filesystem::FileSystem;
     use crate::index::IndexType;
-    use crate::versionlist::VersionList;
 
     use std::fs::File;
-    use std::io::{Cursor, Write};
+    use std::io::Write;
 
     #[test]
     fn archive_decoding() {
@@ -29,13 +28,6 @@ mod tests {
     #[test]
     fn error_testing() {
         let fs = FileSystem::new("./data/cache/").unwrap();
-        let version_id = 5;
-
-        let anim_version = fs.read_archive(version_id).unwrap();
-        let _anim_version = anim_version.entry_name("anim_version").unwrap();
-        let anim_version = VersionList::decode(&mut Cursor::new([9]), 5).unwrap();
-
-        println!("{:?}", anim_version);
     }
 
     #[test]

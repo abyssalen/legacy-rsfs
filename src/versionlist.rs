@@ -1,7 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt};
 
-use crate::error::FileSystemError;
-
+use crate::errors::FileSystemError;
 use std::io::Read;
 
 pub const DEFAULT_VERSION_ENTRY_NAMES: &'static [&'static str; 4] = &[

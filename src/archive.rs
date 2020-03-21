@@ -1,11 +1,11 @@
 use crate::compression;
 use crate::str::StrExt;
 
-use crate::error::FileSystemError;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+use crate::errors::FileSystemError;
 use std::io::{Cursor, Read};
 
 pub const ARCHIVE_HEADER_SIZE: usize = 6;
@@ -73,9 +73,7 @@ impl TryFrom<Vec<u8>> for Archive {
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
         if buffer.is_empty() {
-            return Err(FileSystemError::msg(
-                "Cannot decode empty buffer into an Archive.",
-            ));
+            return Err(FileSystemError::EmptyArchiveDataGiven);
         }
         let mut buffer = Cursor::new(buffer);
         let mut header: [u8; ARCHIVE_HEADER_SIZE] = [0; ARCHIVE_HEADER_SIZE];

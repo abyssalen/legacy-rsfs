@@ -1,5 +1,4 @@
-use crate::error::FileSystemError;
-
+use crate::errors::FileSystemError;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
@@ -44,7 +43,7 @@ impl Index {
     pub fn entry(&self, entry_id: u32) -> Result<IndexEntry, FileSystemError> {
         let ptr = (entry_id as u64) * (Index::SIZE as u64);
         if ptr >= self.file_size {
-            return Err(FileSystemError::index_entry_not_found(entry_id));
+            return Err(FileSystemError::IndexEntryNotFound(entry_id));
         }
         let mut index_file = &self.file;
         let seek_from = SeekFrom::Start(ptr);
