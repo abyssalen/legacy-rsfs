@@ -69,8 +69,8 @@ impl FileSystem {
         Ok(index.file_count())
     }
 
-    pub fn index_count(&self) -> u32 {
-        self.indices.len() as u32
+    pub fn index_count(&self) -> u8 {
+        self.indices.len() as u8
     }
 
     pub fn read_archive(&self, archive_type: ArchiveType) -> Result<Archive, FileSystemError> {
