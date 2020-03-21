@@ -30,65 +30,6 @@ impl Archive {
     }
 }
 
-#[derive(Debug)]
-struct ArchiveHeader {
-    decompressed_size: u32,
-    compressed_size: u32,
-}
-
-impl TryFrom<&[u8; ARCHIVE_HEADER_SIZE]> for ArchiveHeader {
-    type Error = FileSystemError;
-
-    fn try_from(value: &[u8; ARCHIVE_HEADER_SIZE]) -> Result<Self, Self::Error> {
-        let mut cursor = Cursor::new(value);
-        let decompressed_size = cursor.read_u24::<BigEndian>()?;
-        let compressed_size = cursor.read_u24::<BigEndian>()?;
-        Ok(ArchiveHeader {
-            decompressed_size,
-            compressed_size,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub struct ArchiveType(u32);
-impl ArchiveType {
-    pub const EMPTY: ArchiveType = ArchiveType(0);
-    pub const TITLE: ArchiveType = ArchiveType(1);
-    pub const CONFIG: ArchiveType = ArchiveType(2);
-    pub const INTERFACE: ArchiveType = ArchiveType(3);
-    pub const MEDIA: ArchiveType = ArchiveType(4);
-    pub const VERSIONS: ArchiveType = ArchiveType(5);
-    pub const TEXTURES: ArchiveType = ArchiveType(6);
-    pub const CHAT: ArchiveType = ArchiveType(7);
-    pub const SOUNDS: ArchiveType = ArchiveType(8);
-
-    pub fn new(id: u32) -> Self {
-        ArchiveType(id)
-    }
-
-    pub fn id(&self) -> u32 {
-        self.0
-    }
-}
-
-#[derive(Debug)]
-pub struct ArchiveEntry {
-    identifier: i32,
-    uncompressed_size: u32,
-    compressed_size: u32,
-    uncompressed_data: Vec<u8>,
-}
-
-impl ArchiveEntry {
-    pub fn uncompressed_data(&self) -> &[u8] {
-        &self.uncompressed_data
-    }
-
-    pub fn identifier(&self) -> i32 {
-        self.identifier
-    }
-}
 
 impl TryFrom<Vec<u8>> for Archive {
     type Error = FileSystemError;
@@ -156,5 +97,65 @@ impl TryFrom<Vec<u8>> for Archive {
             );
         }
         Ok(Archive { entries, header })
+    }
+}
+
+#[derive(Debug)]
+struct ArchiveHeader {
+    decompressed_size: u32,
+    compressed_size: u32,
+}
+
+impl TryFrom<&[u8; ARCHIVE_HEADER_SIZE]> for ArchiveHeader {
+    type Error = FileSystemError;
+
+    fn try_from(value: &[u8; ARCHIVE_HEADER_SIZE]) -> Result<Self, Self::Error> {
+        let mut cursor = Cursor::new(value);
+        let decompressed_size = cursor.read_u24::<BigEndian>()?;
+        let compressed_size = cursor.read_u24::<BigEndian>()?;
+        Ok(ArchiveHeader {
+            decompressed_size,
+            compressed_size,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct ArchiveType(u32);
+impl ArchiveType {
+    pub const EMPTY: ArchiveType = ArchiveType(0);
+    pub const TITLE: ArchiveType = ArchiveType(1);
+    pub const CONFIG: ArchiveType = ArchiveType(2);
+    pub const INTERFACE: ArchiveType = ArchiveType(3);
+    pub const MEDIA: ArchiveType = ArchiveType(4);
+    pub const VERSIONS: ArchiveType = ArchiveType(5);
+    pub const TEXTURES: ArchiveType = ArchiveType(6);
+    pub const CHAT: ArchiveType = ArchiveType(7);
+    pub const SOUNDS: ArchiveType = ArchiveType(8);
+
+    pub fn new(id: u32) -> Self {
+        ArchiveType(id)
+    }
+
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+}
+
+#[derive(Debug)]
+pub struct ArchiveEntry {
+    identifier: i32,
+    uncompressed_size: u32,
+    compressed_size: u32,
+    uncompressed_data: Vec<u8>,
+}
+
+impl ArchiveEntry {
+    pub fn uncompressed_data(&self) -> &[u8] {
+        &self.uncompressed_data
+    }
+
+    pub fn identifier(&self) -> i32 {
+        self.identifier
     }
 }

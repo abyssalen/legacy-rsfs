@@ -26,48 +26,6 @@ pub struct FileSystem {
     indices: HashMap<u8, Index>,
 }
 
-struct CacheSectorHeader {
-    next_entry_id: u32,
-    next_sequence: u32,
-    next_block: u64,
-    next_index_id: u8,
-}
-
-impl TryFrom<&[u8]> for CacheSectorHeader {
-    type Error = FileSystemError;
-
-    fn try_from(block_data: &[u8]) -> Result<Self, Self::Error> {
-        let (next_entry_id, next_sequence, next_block, next_index_id) = match block_data.len() {
-            BLOCK_HEADER_EXTENDED_SIZE => (
-                ((block_data[0] as u32) << 24)
-                    | ((block_data[1] as u32) << 16)
-                    | ((block_data[2] as u32) << 8)
-                    | (block_data[3] as u32),
-                (((block_data[4] as u32) << 8) | (block_data[5] as u32)),
-                ((block_data[6] as u64) << 16)
-                    | ((block_data[7] as u64) << 8)
-                    | (block_data[8] as u64),
-                block_data[9] as u8,
-            ),
-            BLOCK_HEADER_SIZE => (
-                ((block_data[0] as u32) << 8) | (block_data[1] as u32),
-                (((block_data[2] as u32) << 8) | (block_data[3] as u32)),
-                ((block_data[4] as u64) << 16)
-                    | ((block_data[5] as u64) << 8)
-                    | (block_data[6] as u64),
-                block_data[7] as u8,
-            ),
-            other => return Err(FileSystemError::InvalidBlockHeaderLength(other)),
-        };
-        Ok(CacheSectorHeader {
-            next_entry_id,
-            next_sequence,
-            next_block,
-            next_index_id,
-        })
-    }
-}
-
 impl FileSystem {
     pub fn new<P: AsRef<Path>>(base: P) -> Result<Self, FileSystemError> {
         let path = base.as_ref();
@@ -180,5 +138,47 @@ impl FileSystem {
             }
         }
         Ok(buffer)
+    }
+}
+
+struct CacheSectorHeader {
+    next_entry_id: u32,
+    next_sequence: u32,
+    next_block: u64,
+    next_index_id: u8,
+}
+
+impl TryFrom<&[u8]> for CacheSectorHeader {
+    type Error = FileSystemError;
+
+    fn try_from(block_data: &[u8]) -> Result<Self, Self::Error> {
+        let (next_entry_id, next_sequence, next_block, next_index_id) = match block_data.len() {
+            BLOCK_HEADER_EXTENDED_SIZE => (
+                ((block_data[0] as u32) << 24)
+                    | ((block_data[1] as u32) << 16)
+                    | ((block_data[2] as u32) << 8)
+                    | (block_data[3] as u32),
+                (((block_data[4] as u32) << 8) | (block_data[5] as u32)),
+                ((block_data[6] as u64) << 16)
+                    | ((block_data[7] as u64) << 8)
+                    | (block_data[8] as u64),
+                block_data[9] as u8,
+            ),
+            BLOCK_HEADER_SIZE => (
+                ((block_data[0] as u32) << 8) | (block_data[1] as u32),
+                (((block_data[2] as u32) << 8) | (block_data[3] as u32)),
+                ((block_data[4] as u64) << 16)
+                    | ((block_data[5] as u64) << 8)
+                    | (block_data[6] as u64),
+                block_data[7] as u8,
+            ),
+            other => return Err(FileSystemError::InvalidBlockHeaderLength(other)),
+        };
+        Ok(CacheSectorHeader {
+            next_entry_id,
+            next_sequence,
+            next_block,
+            next_index_id,
+        })
     }
 }
