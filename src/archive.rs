@@ -51,6 +51,28 @@ impl TryFrom<&[u8; ARCHIVE_HEADER_SIZE]> for ArchiveHeader {
 }
 
 #[derive(Debug)]
+pub struct ArchiveType(u32);
+impl ArchiveType {
+    pub const EMPTY: ArchiveType = ArchiveType(0);
+    pub const TITLE: ArchiveType = ArchiveType(1);
+    pub const CONFIG: ArchiveType = ArchiveType(2);
+    pub const INTERFACE: ArchiveType = ArchiveType(3);
+    pub const MEDIA: ArchiveType = ArchiveType(4);
+    pub const VERSIONS: ArchiveType = ArchiveType(5);
+    pub const TEXTURES: ArchiveType = ArchiveType(6);
+    pub const CHAT: ArchiveType = ArchiveType(7);
+    pub const SOUNDS: ArchiveType = ArchiveType(8);
+
+    pub fn new(id: u32) -> Self {
+        ArchiveType(id)
+    }
+
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+}
+
+#[derive(Debug)]
 pub struct ArchiveEntry {
     identifier: i32,
     uncompressed_size: u32,

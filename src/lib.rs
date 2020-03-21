@@ -10,24 +10,20 @@ mod versionlist;
 #[cfg(test)]
 mod tests {
 
-    use crate::compression::{decompress_bzip2, decompress_gzip};
+    use crate::compression::decompress_gzip;
     use crate::filesystem::FileSystem;
     use crate::index::IndexType;
 
+    use crate::archive::ArchiveType;
     use std::fs::File;
     use std::io::Write;
 
     #[test]
     fn archive_decoding() {
         let fs = FileSystem::new("./data/cache/").unwrap();
-        let archive = fs.read_archive(5).unwrap();
-        let anim_crc = archive.entry_name("anim_crc").unwrap();
-        let _data = anim_crc.uncompressed_data();
-    }
-
-    #[test]
-    fn error_testing() {
-        let fs = FileSystem::new("./data/cache/").unwrap();
+        let title_archive = fs.read_archive(ArchiveType::TITLE).unwrap();
+        let logo_archive_entry = title_archive.entry_name("logo.dat").unwrap();
+        println!("{:#?}", logo_archive_entry);
     }
 
     #[test]

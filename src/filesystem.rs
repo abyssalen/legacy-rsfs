@@ -1,4 +1,4 @@
-use crate::archive::Archive;
+use crate::archive::{Archive, ArchiveType};
 use crate::index::{Index, IndexType};
 
 use std::collections::HashMap;
@@ -115,11 +115,11 @@ impl FileSystem {
         self.indices.len() as u32
     }
 
-    pub fn read_archive(&self, entry_id: u32) -> Result<Archive, FileSystemError> {
-        let file_data = self.read(IndexType::ARCHIVE, entry_id);
+    pub fn read_archive(&self, archive_type: ArchiveType) -> Result<Archive, FileSystemError> {
+        let file_data = self.read(IndexType::ARCHIVE, archive_type.id());
         let file_data = match file_data {
             Ok(file_data) => file_data,
-            Err(_) => return Err(FileSystemError::ArchiveNotFound(entry_id)),
+            Err(_) => return Err(FileSystemError::ArchiveNotFound(archive_type.id())),
         };
         Archive::try_from(file_data)
     }
