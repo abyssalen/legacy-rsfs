@@ -98,10 +98,12 @@ the library will automatically decompress them after accessing an `Archive`.
 Let's try to get the data for the RuneScape logo:
 
 ```rust
+use legacy-rsfs::archive::ArchiveType;
+
+
 let fs = FileSystem::new(your_path)?;
-let title_archive_id = 1;
 // let's open the Title archive
-let archive: Archive = fs.read_archive(title_archive_id)?;
+let archive: Archive = fs.read_archive(ArchiveType::TITLE)?;
 // now find the logo that is inside the archive by using its name
 let logo_entry: &ArchiveEntry = archive.entry_name("logo.dat")?;
 ```
