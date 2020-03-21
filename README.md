@@ -47,7 +47,7 @@ use legacy-rsfs::filesystem::FileSystem;
 use legacy-rsfs::index::IndexType;
 
 
-let fs = FileSystem::new(your_path)?;
+let fs = FileSystem::new("path_to_your_cache")?;
 let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 ```
@@ -65,7 +65,7 @@ use legacy-rsfs::filesystem::FileSystem;
 use legacy-rsfs::index::IndexType;
 
 
-let fs = FileSystem::new(your_path)?;
+let fs = FileSystem::new("path_to_your_cache")?;
 let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
@@ -81,7 +81,7 @@ use legacy-rsfs::filesystem::FileSystem;
 use legacy-rsfs::index::IndexType;
 
 
-let fs = FileSystem::new(your_path)?;
+let fs = FileSystem::new("path_to_your_cache")?;
 let file_entry_id: u32 = 17;
 let read_data: Vec<u8> = fs.read(IndexType::MIDI, file_entry_id)?;
 let decompressed_data: Vec<u8> = compression::decompress_gzip(read_data)?;
@@ -101,7 +101,7 @@ Let's try to get the data for the RuneScape logo:
 use legacy-rsfs::archive::ArchiveType;
 
 
-let fs = FileSystem::new(your_path)?;
+let fs = FileSystem::new("path_to_your_cache")?;
 // let's open the Title archive
 let archive: Archive = fs.read_archive(ArchiveType::TITLE)?;
 // now find the logo that is inside the archive by using its name
