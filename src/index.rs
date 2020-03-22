@@ -53,7 +53,11 @@ impl Index {
         let size: u32 = ((buffer[0] as u32) << 16) | ((buffer[1] as u32) << 8) | (buffer[2] as u32);
         let offset: u64 =
             ((buffer[3] as u64) << 16) | ((buffer[4] as u64) << 8) | (buffer[5] as u64);
-        Ok(IndexEntry { size, offset })
+        Ok(IndexEntry {
+            id: entry_id,
+            size,
+            offset,
+        })
     }
 
     pub fn index_type(&self) -> &IndexType {
@@ -66,11 +70,16 @@ impl Index {
 }
 
 pub struct IndexEntry {
+    id: u32,
     size: u32,
     offset: u64,
 }
 
 impl IndexEntry {
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     pub fn size(&self) -> u32 {
         self.size
     }
