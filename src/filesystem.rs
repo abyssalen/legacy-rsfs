@@ -134,9 +134,7 @@ impl FileSystem {
                         actual: sector_header.next_entry_id as usize,
                     });
                 }
-                buffer.write(
-                    &block_data[block_header_size..total_consumed],
-                )?;
+                buffer.write(&block_data[block_header_size..total_consumed])?;
                 remaining_bytes -= chunks_consumed;
                 block = sector_header.next_block;
                 current_sequence += 1;
