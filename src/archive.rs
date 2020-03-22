@@ -30,7 +30,6 @@ impl Archive {
     }
 }
 
-
 impl TryFrom<Vec<u8>> for Archive {
     type Error = FileSystemError;
 
