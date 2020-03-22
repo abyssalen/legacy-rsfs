@@ -108,7 +108,10 @@ impl FileSystem {
             main_data_file.seek(SeekFrom::Start(block * TOTAL_BLOCK_SIZE))?;
             main_data_file.read(&mut block_data)?;
             let sector_header = CacheSectorHeader::try_from(&block_data[0..block_header_size])?;
+            // the bytes consumed in this iteration minus the header size
             let chunks_consumed = std::cmp::min(remaining_bytes, block_chunk_size);
+            // the bytes consumed in this iteration plus the header size
+            let total_consumed: usize = chunks_consumed as usize + block_header_size as usize;
             if remaining_bytes > 0 {
                 if sector_header.next_index_id != (index_id + 1) {
                     return Err(FileSystemError::SectorReadingDataMismatch {
@@ -131,7 +134,9 @@ impl FileSystem {
                         actual: sector_header.next_entry_id as usize,
                     });
                 }
-                buffer.write(&block_data[block_header_size..])?;
+                buffer.write(
+                    &block_data[block_header_size..total_consumed],
+                )?;
                 remaining_bytes -= chunks_consumed;
                 block = sector_header.next_block;
                 current_sequence += 1;
