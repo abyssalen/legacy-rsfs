@@ -3,14 +3,13 @@ use byteorder::{BigEndian, ReadBytesExt};
 use crate::errors::FileSystemError;
 use std::io::Read;
 
-pub const DEFAULT_VERSION_ENTRY_NAMES: &'static [&'static str; 4] = &[
+pub const DEFAULT_VERSION_ENTRY_NAMES: &[&str; 4] = &[
     "model_version",
     "anim_version",
     "midi_version",
     "map_version",
 ];
-pub const DEFAULT_CRC_ENTRY_NAMES: &'static [&'static str; 4] =
-    &["model_crc", "anim_crc", "midi_crc", "map_crc"];
+pub const DEFAULT_CRC_ENTRY_NAMES: &[&str; 4] = &["model_crc", "anim_crc", "midi_crc", "map_crc"];
 
 #[derive(Debug)]
 pub struct VersionList {
